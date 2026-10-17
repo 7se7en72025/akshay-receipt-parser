@@ -252,6 +252,25 @@ class VisionComparisonTests(unittest.TestCase):
 
 
 class VisionApiTests(unittest.TestCase):
+    def test_old_prompt_report_cannot_be_applied_after_an_upgrade(self):
+        job = self.complete()
+        with store.connection() as db:
+            row = db.execute(
+                "SELECT result_json FROM verification_jobs WHERE id=?", (job["id"],)
+            ).fetchone()
+            result = json.loads(row["result_json"])
+            result["prompt_version"] = "old-unsafe-format"
+            db.execute(
+                "UPDATE verification_jobs SET result_json=? WHERE id=?",
+                (json.dumps(result), job["id"]),
+            )
+        response = self.client.post(
+            f"/api/documents/bill/verifications/{job['id']}/apply",
+            json={"version": 1, "selected": ["1:grand_total"]},
+        )
+        self.assertEqual(response.status_code, 409)
+        self.assertEqual(store.get_document("bill")["invoice"], self.draft)
+
     def setUp(self):
         from backend.main import app
 

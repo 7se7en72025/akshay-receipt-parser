@@ -22,7 +22,11 @@ def present(row, current_version):
     job = dict(row)
     job["result"] = json.loads(job.pop("result_json"))
     job.pop("snapshot_json", None)
-    job["stale"] = job["document_version"] != current_version
+    job["outdated"] = bool(
+        job["result"].get("prompt_version")
+        and job["result"]["prompt_version"] != vision.PROMPT_VERSION
+    )
+    job["stale"] = job["document_version"] != current_version or job["outdated"]
     return job
 
 

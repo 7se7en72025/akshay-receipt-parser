@@ -499,7 +499,9 @@ def verification_result(document_id: str, job_id: str):
 def accept_ai_suggestions(document_id: str, job_id: str, payload: AcceptSuggestionsRequest):
     document, job = verification_or_404(document_id, job_id)
     if job["stale"] or document["version"] != payload.version:
-        raise HTTPException(409, "Draft changed since verification. Run a new verification.")
+        raise HTTPException(
+            409, "Draft or AI reading settings changed since verification. Run a new verification."
+        )
     if document["status"] == "approved":
         raise HTTPException(409, "Restore this bill as a draft before applying suggestions.")
     if job["status"] not in {"completed", "partial"}:
