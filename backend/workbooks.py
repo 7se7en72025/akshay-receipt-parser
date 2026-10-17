@@ -294,6 +294,9 @@ def create_export(documents, template=None):
                     {
                         "documents": snapshot,
                         "template_id": template["id"] if template else None,
+                        "template_config": json.loads(template["config_json"])
+                        if template
+                        else None,
                         "rows": len(rows),
                     }
                 ),

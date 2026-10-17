@@ -171,10 +171,20 @@ def table_items(rows, page_number):
             else:
                 values[field] = number(value)
         description = values.get("description", "")
+        has_serial = any(
+            clean(parents[index]) in {"srno", "sno", "serialno", "no", "itemno"}
+            and re.fullmatch(r"\d+", str(row[index] or "").strip())
+            for index in range(min(len(parents), len(row)))
+        )
         if (
             description
             and clean(description) not in {"total", "subtotal", "grandtotal"}
-            and values.get("quantity") is not None
+            and (
+                values.get("quantity") is not None
+                or has_serial
+                or values.get("unit_price") is not None
+                or values.get("taxable_amount") is not None
+            )
         ):
             try:
                 result.append(Item.model_validate(values))
@@ -205,7 +215,7 @@ def ocr_page(image):
     # Limit long edges to keep OCR memory bounded in a local workspace.
     image.thumbnail((2400, 3200))
     output = ocr_engine()(np.asarray(image))
-    if output.txts is None or output.boxes is None:
+    if output.txts is None or output.boxes is None or output.scores is None:
         return "", [], []
     records = []
     for box, text, score in zip(output.boxes, output.txts, output.scores, strict=True):
@@ -262,14 +272,24 @@ def extract_document(path: Path, mime: str):
             for page_index, page in enumerate(pdf.pages):
                 page_text = page.extract_text(x_tolerance=1) or ""
                 page_tables = page.extract_tables(table_settings={"text_x_tolerance": 1})
-                if len(page_text.strip()) < 40:
+                large_image = any(
+                    (image["x1"] - image["x0"]) * (image["bottom"] - image["top"])
+                    > page.width * page.height * 0.4
+                    for image in page.images
+                )
+                mapped_items = any(table_items(table, page_index + 1) for table in page_tables)
+                if len(page_text.strip()) < 40 or (large_image and not mapped_items):
                     document = pdfium.PdfDocument(path)
                     try:
-                        bitmap = document[page_index].render(scale=2)
+                        rendered_page = document[page_index]
                         try:
-                            page_text, page_tables, _ = ocr_page(bitmap.to_pil())
+                            bitmap = rendered_page.render(scale=2)
+                            try:
+                                page_text, page_tables, _ = ocr_page(bitmap.to_pil())
+                            finally:
+                                bitmap.close()
                         finally:
-                            bitmap.close()
+                            rendered_page.close()
                     finally:
                         document.close()
                     methods.add("ocr")

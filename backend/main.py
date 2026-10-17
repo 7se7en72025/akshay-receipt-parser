@@ -111,7 +111,9 @@ def business_duplicates(invoice, document_id):
 def present(document, include_raw=True):
     invoice = Invoice.model_validate(document["invoice"])
     document["invoice"] = invoice.model_dump(mode="json")
-    document["validation"] = validate_invoice(invoice, business_duplicates(invoice, document["id"]))
+    document["validation"] = validate_invoice(
+        invoice, business_duplicates(invoice, document["id"]) if include_raw else []
+    )
     if not include_raw:
         document.pop("raw_text", None)
         document.pop("raw_tables", None)

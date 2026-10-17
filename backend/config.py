@@ -2,8 +2,12 @@ import os
 from pathlib import Path
 from urllib.parse import urlparse
 
+from dotenv import load_dotenv
+
 ROOT = Path(__file__).resolve().parent.parent
-DATA = Path(os.environ.get("AKSHAY_DATA_DIR", ROOT / "data")).resolve()
+load_dotenv(ROOT / ".env", override=False)
+data_path = Path(os.environ.get("AKSHAY_DATA_DIR", ROOT / "data"))
+DATA = (data_path if data_path.is_absolute() else ROOT / data_path).resolve()
 UPLOADS = DATA / "uploads"
 EXPORTS = DATA / "exports"
 TEMPLATES = DATA / "templates"
