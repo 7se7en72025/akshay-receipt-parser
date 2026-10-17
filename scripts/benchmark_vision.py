@@ -24,9 +24,10 @@ sys.path.insert(0, str(ROOT))
 MODELS = ("qwen3-vl:2b-instruct-q4_K_M", "granite3.2-vision:2b")
 os.environ.setdefault("AKSHAY_OLLAMA_URL", "http://127.0.0.1:11435")
 os.environ.setdefault("AKSHAY_VISION_MODELS", ",".join(MODELS))
-CACHE = (
-    Path(os.environ.get("AKSHAY_AI_HOME", "D:/KyvernoBuild/akshay-local-ai")) / "benchmark-new100"
-)
+CACHE = Path(os.environ.get(
+    "AKSHAY_BENCHMARK_DIR",
+    str(Path(os.environ.get("AKSHAY_AI_HOME", "D:/KyvernoBuild/akshay-local-ai")) / "benchmark-new100"),
+))
 
 
 def free_memory_gb():
@@ -93,6 +94,15 @@ def check_resources(model, url):
         response.raise_for_status()
         loaded = any(entry.get("name") == model for entry in response.json()["models"])
     require_memory(available, loaded, free_gpu_memory_gb() if not loaded else None, model)
+
+
+def unload_model(model, url):
+    """Release this evaluation's model between batches; never change readings."""
+    with httpx.Client(trust_env=False, timeout=30) as client:
+        response = client.post(url + "/api/generate", json={"model": model, "keep_alive": 0})
+        response.raise_for_status()
+        if response.json().get("done_reason") != "unload":
+            raise RuntimeError("Model did not confirm unloading; inspect the local runtime.")
 
 
 def reference(row, visible=False):
@@ -235,6 +245,10 @@ def main():
     )
     parser.add_argument("--model", choices=MODELS)
     parser.add_argument("--retry-errors", action="store_true")
+    parser.add_argument("--protocol-lock", type=Path,
+                        help="Require this frozen reader signature before validation inference.")
+    parser.add_argument("--unload-every", type=int, default=5,
+                        help="Release model memory after this many new readings (default: 5).")
     parser.add_argument(
         "--pause-seconds",
         type=float,
@@ -258,6 +272,8 @@ def main():
         parser.error("--start-at must be between 1 and --limit")
     if not 0 <= args.pause_seconds <= 60:
         parser.error("--pause-seconds must be between 0 and 60")
+    if not 1 <= args.unload_every <= 100:
+        parser.error("--unload-every must be between 1 and 100")
     from backend import vision
 
     manifest = json.loads((CACHE / "manifest.json").read_text(encoding="utf-8"))
@@ -277,8 +293,13 @@ def main():
                     f"{model} is not installed. Complete model setup before benchmarking; no bill inference was attempted."
                 )
             model_digest = installed[model]
+        if args.protocol_lock:
+            lock = json.loads(args.protocol_lock.read_text(encoding="utf-8"))
+            if lock["signature"] != vision.reader_signature(model, model_digest):
+                raise RuntimeError("Reader differs from the frozen validation protocol; no inference attempted.")
         model_dir = output / model.replace(":", "_")
         model_dir.mkdir(exist_ok=True)
+        fresh_readings = 0
         for index, row in enumerate(rows, 1):
             source = CACHE / row["image_file"]
             if hashlib.sha256(source.read_bytes()).hexdigest() != row["sha256"]:
@@ -310,6 +331,7 @@ def main():
                 try:
                     check_resources(model, vision.OLLAMA_URL)
                 except RuntimeError as error:
+                    unload_model(model, vision.OLLAMA_URL)
                     summarize(manifest, model_dir, model, len(rows))
                     parser.exit(3, str(error) + "\n")
             started = time.monotonic()
@@ -328,6 +350,7 @@ def main():
             result.update({"sha256": row["sha256"], "prompt_version": vision.PROMPT_VERSION})
             result["model_digest"] = model_digest
             result["idle_pause_seconds"] = args.pause_seconds if model != "ocr-baseline" else 0
+            result["unload_interval"] = args.unload_every if model != "ocr-baseline" else None
             if previous_attempts:
                 result["previous_attempts"] = previous_attempts
             result_file.write_text(json.dumps(result, indent=2), encoding="utf-8")
@@ -335,6 +358,10 @@ def main():
                 f"{model} {index}/{len(rows)} {result['seconds']}s {'ERROR' if result.get('error') else 'read'}",
                 flush=True,
             )
+            fresh_readings += 1
+            if model != "ocr-baseline" and fresh_readings % args.unload_every == 0:
+                unload_model(model, vision.OLLAMA_URL)
+                print("Released model memory after the saved batch.", flush=True)
         summarize(manifest, model_dir, model, len(rows))
 
 
@@ -402,6 +429,7 @@ def summarize(manifest, model_dir, model, count):
             "model_digest": result.get("model_digest"),
             "previous_attempts": len(result.get("previous_attempts", [])),
             "idle_pause_seconds": result.get("idle_pause_seconds", 0),
+            "unload_interval": result.get("unload_interval"),
             "raw_date_reading": result.get("printed_date"),
         }
         # Failed/malformed/timed-out responses count as failures, never omitted.

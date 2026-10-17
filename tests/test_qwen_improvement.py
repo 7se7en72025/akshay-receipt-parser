@@ -4,9 +4,12 @@ import copy
 import sys
 import unittest
 from pathlib import Path
+from unittest.mock import patch
+
+import httpx
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "scripts"))
-from benchmark_vision import require_memory  # noqa: E402
+from benchmark_vision import require_memory, unload_model  # noqa: E402
 from report_qwen_improvement import paired_changes  # noqa: E402
 
 
@@ -20,6 +23,16 @@ def fixture():
 
 
 class PairedQwenTests(unittest.TestCase):
+    def test_batch_cleanup_only_requests_model_unloading(self):
+        response = httpx.Response(
+            200, json={"done_reason": "unload"},
+            request=httpx.Request("POST", "http://localhost/api/generate"),
+        )
+        with patch.object(httpx.Client, "post", return_value=response) as post:
+            unload_model("test-model", "http://localhost")
+        self.assertEqual(post.call_args.args, ("http://localhost/api/generate",))
+        self.assertEqual(post.call_args.kwargs["json"], {"model": "test-model", "keep_alive": 0})
+
     def test_memory_guard_leaves_headroom_before_loading_and_between_bills(self):
         for available, loaded in ((0.5, True), (3.58, False)):
             with self.assertRaisesRegex(RuntimeError, "not a model failure"):

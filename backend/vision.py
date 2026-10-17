@@ -5,6 +5,7 @@ against a draft happens afterwards using Decimal arithmetic and exact row keys.
 """
 
 import base64
+import hashlib
 import io
 import json
 import re
@@ -105,6 +106,24 @@ Use plain decimal strings for numbers, with dot decimal separator and no
 thousands separators. Recheck every digit against its own printed row/label.
 Return just the JSON object, with every schema field present.
 """
+
+
+def reader_signature(model, model_digest):
+    """Freeze source-reading settings without including any invoice or answer."""
+    preparation = Path(__file__).with_name("vision_images.py")
+    return {
+        "model": model, "model_digest": model_digest,
+        "prompt_version": PROMPT_VERSION,
+        "prompt_sha256": hashlib.sha256(PROMPT.encode()).hexdigest(),
+        "schema_sha256": hashlib.sha256(json.dumps(
+            PageReading.model_json_schema(), separators=(",", ":"),
+        ).encode()).hexdigest(),
+        "normalization_version": NORMALIZATION_VERSION,
+        "preprocessing_version": globals().get("PREPROCESSING_VERSION", "bounded-original-v1"),
+        "image_edge": IMAGE_EDGE, "model_options": model_options(model),
+        "reader_source_sha256": hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
+        "image_helper_sha256": hashlib.sha256(preparation.read_bytes()).hexdigest(),
+    }
 
 
 def capabilities():
