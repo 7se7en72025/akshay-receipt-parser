@@ -7,4 +7,5 @@ data/
 node_modules/
 frontend/dist/
 *.log
+*.tsbuildinfo
 .DS_Store
