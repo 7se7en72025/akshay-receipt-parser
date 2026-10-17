@@ -34,9 +34,10 @@ def main():
                 )
         models[model] = result
     original = json.loads((ROOT / "data/benchmark/final-currency.json").read_text(encoding="utf-8"))
+    original_summary = {key: value for key, value in original.items() if key != "results"}
     api = json.loads((ROOT / "data/benchmark/api-final.json").read_text(encoding="utf-8"))
     smoke = json.loads((CACHE.parent / "api-smoke-result.json").read_text(encoding="utf-8"))
-    if original["summary"]["count"] != 100 or api["count"] != 100 or api["failures"]:
+    if original["count"] != 100 or api["count"] != 100 or api["failures"]:
         raise RuntimeError("Re-run the original 100-bill regression and API workflow first.")
     templates = dict(Counter(row["_template_used"] for row in manifest["documents"]))
     currencies = dict(Counter(row["document_currency"] for row in manifest["documents"]))
@@ -47,7 +48,7 @@ def main():
         "new_set_templates": templates,
         "new_set_currencies": currencies,
         "new_line_items": sum(len(row["line_items"]) for row in manifest["documents"]),
-        "original_regression": original["summary"],
+        "original_regression": original_summary,
         "original_api_workflow": api,
         "real_vision_api_workflow": smoke,
         "models": models,
@@ -111,7 +112,7 @@ unit rates, is absent from the rendered image. A model must not guess it.
 
 ## Original regression and workflow integrity
 
-- Original extractor: {original["summary"]["exact_bills"]}/100 exact, plus the
+- Original extractor: {original["exact_bills"]}/100 exact, plus the
   existing explicitly flagged one-cent printed FX discrepancy. The source
   entries are retained; that discrepancy is not counted as exact.
 - Original real API workflow: {api["round_trip_exact"]}/100 stored drafts match
