@@ -63,7 +63,7 @@ def currency_value(text, default="INR"):
         return "EUR"
     if "$" in text and ("Sales Tax" in text or re.search(r"\b[A-Z]{2} \d{5}\b", text)):
         return "USD"
-    if "$" in text:
+    if "$" in text and default == "INR":
         return "UNK"  # Never silently approve ambiguous dollar amounts as INR.
     return default
 
@@ -281,6 +281,9 @@ def borderless_tables(words):
             columns = []
             for index, word in enumerate(line):
                 name = names[index]
+                # Do not create a second column for a consumed heading suffix.
+                if columns and word["x1"] <= columns[-1]["end"]:
+                    continue
                 if name in {
                     "description",
                     "code",
@@ -288,7 +291,6 @@ def borderless_tables(words):
                     "qty",
                     "quantity",
                     "price",
-                    "rate",
                     "rate",
                     "amount",
                     "total",
@@ -320,7 +322,8 @@ def borderless_tables(words):
                                 "%",
                                 "/",
                             } or (
-                                following["text"].lower() == "value" and name in {"vat", "amount"}
+                                following["text"].lower() == "value"
+                                and name in {"vat", "amount", "qty", "quantity"}
                             ):
                                 end = following["x1"]
                                 if name == "amount" and following["text"].upper() in {

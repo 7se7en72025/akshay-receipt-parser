@@ -6,6 +6,38 @@ from backend.layouts import borderless_tables, currency_value, generic_fields
 
 
 class ImageLayoutTests(unittest.TestCase):
+    def test_bare_dollar_payable_does_not_override_currency_from_full_source(self):
+        fields = generic_fields(
+            "Example LLC\nMemphis, TN 38115\nSubtotal $100.00\nSales Tax $8.00\nTOTAL $108.00"
+        )
+        self.assertEqual(fields["currency"], "USD")
+        self.assertIsNone(currency_value("TOTAL $108.00", default=None))
+
+    def test_qty_slash_value_is_one_header_not_a_phantom_amount_column(self):
+        words = self.words(
+            [
+                [
+                    (10, 120, "Description"),
+                    (230, 250, "Qty"),
+                    (255, 260, "/"),
+                    (265, 300, "Value"),
+                    (350, 400, "Rate"),
+                    (450, 500, "Amount"),
+                ],
+                [
+                    (10, 180, "Printed freight"),
+                    (285, 300, "1"),
+                    (350, 400, "100.00"),
+                    (450, 500, "100.00"),
+                ],
+            ]
+        )
+        table = borderless_tables(words)[0]
+        self.assertEqual(table[0], ["description", "qty", "rate", "amount"])
+        item = table_items(table, 1)[0]
+        self.assertEqual(item.quantity, Decimal(1))
+        self.assertEqual(item.taxable_amount, Decimal(100))
+
     def words(self, rows):
         result = []
         for row_index, row in enumerate(rows):
