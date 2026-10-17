@@ -171,16 +171,20 @@ the raw model date reading remains available in the read-only page reading for r
 
 ## Protocol and limits
 
-Hardware: 16 GB RAM, NVIDIA RTX 3050 Laptop GPU with 4 GB VRAM. Official portable
-Ollama v0.40.5. Models are local Apache-2.0 releases; one model is loaded at a time.
+Hardware: 16 GB RAM, NVIDIA RTX 3050 Laptop GPU with 4 GB VRAM, NVIDIA driver
+566.07 during evaluation. Official portable Ollama v0.40.5. Models are local
+Apache-2.0 releases; one model is loaded at a time.
 Final prompt: `{vision.PROMPT_VERSION}`; image longest edge {vision.IMAGE_EDGE}px;
 shared generation options: `{json.dumps(vision.MODEL_OPTIONS, sort_keys=True)}`.
 Granite uses a 12288-token context because its image encoder needs about 8k input
 tokens for these A4 pages; Qwen uses 4096. Both get the same image, prompt and
 2048-token output limit. Exact per-model options are recorded in the JSON report.
-Reported latency excludes downloads and idle pauses. Sustained laptop GPU heat
-reduced clock speeds during testing; later requests used cooldown pauses. These
-timings are indicative observations, not a controlled hardware speed comparison.
+Reported latency excludes downloads and idle pauses. Low GPU clocks and
+temperatures around 87-88 degrees C were observed, but sampled NVIDIA status did
+not flag thermal slowdown; heat alone is not a confirmed explanation. Ollama also
+reported partial CPU offloading for Granite (1.41 GB of a 2.52 GB loaded model on
+GPU in one snapshot). Later requests used idle pauses. These timings are
+indicative observations, not a controlled hardware speed comparison.
 
 The new set was used for debugging. These results are a regression/evaluation
 measure, not unseen production accuracy. Blurry photos, handwriting, unusual
