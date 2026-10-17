@@ -348,6 +348,9 @@ def preview(document_id: str, page_number: int):
             try:
                 page = pdf[page_number - 1]
                 try:
+                    width, height = page.get_size()
+                    if width * height * 1.7**2 > MAX_IMAGE_PIXELS:
+                        raise ValueError("PDF page exceeds the preview rendering limit.")
                     bitmap = page.render(scale=1.7)
                     try:
                         bitmap.to_pil().save(target)

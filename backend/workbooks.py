@@ -215,7 +215,10 @@ def create_export(documents, template=None):
         for offset, row in enumerate(rows):
             for field, column in config.mapping.items():
                 cell = sheet.cell(config.start_row + offset, column)
-                if isinstance(cell, MergedCell) or cell.value is not None:
+                merged = isinstance(cell, MergedCell) or any(
+                    cell.coordinate in area for area in sheet.merged_cells.ranges
+                )
+                if merged or cell.value is not None:
                     wb.close()
                     raise ValueError(
                         f"Template cell {cell.coordinate} is occupied or merged. "

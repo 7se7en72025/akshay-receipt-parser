@@ -61,7 +61,9 @@ def header_fields(text):
             if gst:
                 data["supplier_gstin"] = gst[0]
             break
-    compact = re.sub(r"\s+", "", text)
+    # Preserve line boundaries: a footer amount may be followed by another
+    # numeric row, which must never become part of the same decimal value.
+    compact = re.sub(r"[^\S\n]+", "", text)
     labels = {
         "taxable_total": r"TotalTaxableValue",
         "sgst_total": r"(?:SGST/UGST|SGSTTotal|TotalSGST)",
@@ -115,7 +117,9 @@ def column_field(parent, child, discount_index):
     ]:
         if any(name.startswith(alias) for alias in aliases):
             is_rate = "%" in name or "%" in child_name or child_name == "rate"
-            return f"{tax}_rate" if is_rate and tax != "cess" else f"{tax}_amount"
+            if is_rate:
+                return f"{tax}_rate" if tax != "cess" else None
+            return f"{tax}_amount"
     return None
 
 
@@ -279,6 +283,8 @@ def extract_document(path: Path, mime: str):
                 )
                 mapped_items = any(table_items(table, page_index + 1) for table in page_tables)
                 if len(page_text.strip()) < 40 or (large_image and not mapped_items):
+                    if page.width * page.height * 4 > MAX_IMAGE_PIXELS:
+                        raise ValueError("PDF page exceeds the 25 megapixel OCR rendering limit.")
                     document = pdfium.PdfDocument(path)
                     try:
                         rendered_page = document[page_index]
