@@ -99,6 +99,17 @@ A valid schema does not prove the values are correct. AI proposals require the s
 
 ## Supported formats and limitations
 
+### Verify the original with a local vision model
+
+**Checks & history → Verify with AI** independently reads original PDF pages or
+photos and compares them with the saved draft. It shows agreements, differences,
+unreadable fields and page coverage. Only explicitly selected suggestions can be
+saved to a new unapproved draft; version checks prevent applying stale reports.
+See [local vision setup and review workflow](docs/local-vision.md).
+
+This is separate from the optional text-assisted re-extraction described above.
+The image model receives the original page image, without the draft or OCR text.
+
 The first parser targets clearly labelled purchase/invoice tables, including the supplied store-generated purchase-bill layout. Quantity, rate, taxable amounts and tax subcolumns are mapped by headings rather than a fixed column order.
 
 A new supplier layout, unfamiliar labels, merged cells, damaged pages or a blurry photo can need correction. OCR column reconstruction is approximate. Unsupported documents remain review drafts; use manual rows or configured AI assistance.
