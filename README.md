@@ -60,6 +60,10 @@ For frontend development, run the backend as above and run bun run dev from fron
 
 Editing an approved record reopens the draft. It must be approved again before another export.
 
+Use Ctrl+S (Cmd+S on macOS) to save an edited draft. Leaving through the sidebar or closing/reloading the tab warns about unsaved changes. Reload saved discards local edits only after confirmation and is useful after a version conflict.
+
+Select an activity in Checks & history to inspect its saved values and review note. Restore as draft creates a new unapproved version and preserves the audit trail. Save or reload current edits before restoring. Older extraction activities created before snapshot support may have no restorable values.
+
 ## Existing Excel template
 
 Use Excel templates → Attach .xlsx template. The app suggests a heading row based on recognised field names; confirm it.
@@ -106,6 +110,16 @@ SQLite and uploaded/generated files live under data/ by default:
 These folders, .env, the virtual environment and model files are excluded from Git. The supplied real bill is not committed. To change the data directory, set AKSHAY_DATA_DIR in .env.
 
 Stop the backend before copying the complete data directory for a consistent local backup. Shared deployment, authentication, a production database migration plan, retention rules and managed backups are separate work.
+
+### Create a backup while the app is running
+
+~~~powershell
+.\.venv\Scripts\python.exe -m backend.backup "C:\Users\RAIYYAN\Downloads\akshay-backup-2026-10-17.zip"
+~~~
+
+Choose a new filename in an existing folder outside the data directory. The command uses SQLite's backup API and includes the immutable invoice, template and export files referenced by that database snapshot. Generated previews, dependencies and `.env` are excluded. It refuses to overwrite an existing archive. The ZIP contains private bills and is not encrypted; keep it in a protected location.
+
+To restore, stop the app, extract into a **new empty folder**, set `AKSHAY_DATA_DIR` in `.env` to the extracted `data` folder, then restart. Keep your previous data until the restored workspace is reviewed. Incomplete jobs are resumed on startup. Model configuration remains in your existing `.env`.
 
 ## Import from the command line
 

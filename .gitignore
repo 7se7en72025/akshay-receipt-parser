@@ -8,4 +8,5 @@ node_modules/
 frontend/dist/
 *.log
 *.tsbuildinfo
+*.zip
 .DS_Store
