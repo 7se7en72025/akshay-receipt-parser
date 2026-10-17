@@ -19,7 +19,7 @@ def validate_invoice(invoice: Invoice, duplicate_ids=None):
         ("grand_total", "Grand total"),
     ]:
         value = getattr(invoice, field)
-        if value is None or value == "":
+        if value is None or (isinstance(value, str) and not value.strip()):
             issue("error", field, f"{label} is required before approval.")
     if not invoice.items:
         issue("error", "items", "Add at least one product row before approval.")
@@ -32,10 +32,26 @@ def validate_invoice(invoice: Invoice, duplicate_ids=None):
             ("taxable_amount", "Taxable amount"),
         ]:
             value = getattr(item, field)
-            if value is None or value == "":
+            if value is None or (isinstance(value, str) and not value.strip()):
                 issue("error", field, f"{label} is missing on item {index + 1}.", index)
         if item.quantity == 0:
             issue("warning", "quantity", f"Item {index + 1} has zero quantity.", index)
+        for field in ("cgst_rate", "sgst_rate", "igst_rate"):
+            value = getattr(item, field)
+            if value is not None and value > 100:
+                issue("error", field, f"Tax rate exceeds 100% on item {index + 1}.", index)
+        for prefix in ("cgst", "sgst", "igst"):
+            rate = getattr(item, prefix + "_rate")
+            amount = getattr(item, prefix + "_amount")
+            if rate is not None and amount is not None and item.taxable_amount is not None:
+                expected = item.taxable_amount * rate / 100
+                if abs(expected - amount) > TOLERANCE:
+                    issue(
+                        "warning",
+                        prefix + "_amount",
+                        f"Item {index + 1} {prefix.upper()} amount differs from taxable value × rate. Check the printed bill.",
+                        index,
+                    )
         if item.discount_1 is not None or item.discount_2 is not None:
             issue("warning", "discount_1", f"Confirm discount meaning on item {index + 1}.", index)
     fields = [
