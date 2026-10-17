@@ -319,7 +319,7 @@ def summarize(manifest, model_dir, model, count):
             "prompt_version": vision.PROMPT_VERSION,
             "prompt_sha256": hashlib.sha256(vision.PROMPT.encode()).hexdigest(),
             "image_edge": vision.IMAGE_EDGE,
-            "model_options": vision.MODEL_OPTIONS,
+            "model_options": vision.model_options(model),
             "description": "Strict row order, exact decimal values and normalized whitespace/case; no balancing or reference-fed inference.",
         },
         "source": manifest["source"],

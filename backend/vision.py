@@ -33,6 +33,16 @@ MODEL_OPTIONS = {
 }
 
 
+def model_options(model):
+    # Granite's image encoder uses far more input tokens than Qwen's encoder.
+    # An A4 image plus the shared prompt needs ~8k tokens before any answer.
+    return (
+        {**MODEL_OPTIONS, "num_ctx": 12288}
+        if model.startswith("granite3.2-vision:")
+        else dict(MODEL_OPTIONS)
+    )
+
+
 class ReadingItem(BaseModel):
     model_config = ConfigDict(extra="forbid")
     description: str | None = Field(max_length=2000)
@@ -147,7 +157,7 @@ def read_page(path, mime, page_number, model, timeout=180):
                 "keep_alive": "5m",
                 "format": PageReading.model_json_schema(),
                 "messages": [{"role": "user", "content": PROMPT, "images": [image]}],
-                "options": MODEL_OPTIONS,
+                "options": model_options(model),
             },
         )
         response.raise_for_status()
@@ -165,7 +175,7 @@ def read_page(path, mime, page_number, model, timeout=180):
         "prompt_version": PROMPT_VERSION,
         "printed_date": printed_date,
         "image_edge": IMAGE_EDGE,
-        "model_options": MODEL_OPTIONS,
+        "model_options": model_options(model),
     }
 
 

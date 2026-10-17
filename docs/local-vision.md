@@ -74,7 +74,8 @@ re-extraction makes the old report stale. Previous draft values remain in histor
   also read-only.
 - Each page is rendered independently, preserving the immutable source. Images
   are oriented and bounded to 1280 pixels on the longest edge, with a 4096-token
-  context and 128-token evaluation batches to limit memory use. This can lose tiny
+  context for Qwen and 128-token evaluation batches to limit memory use. Granite
+  needs a 12288-token context for its larger image-token representation. This can lose tiny
   print; open the original when the model cannot read it.
 - A model request has a 180-second read timeout. A separate process has a
   15-minute overall job deadline. At most 25 pages and 12 queued/running jobs are

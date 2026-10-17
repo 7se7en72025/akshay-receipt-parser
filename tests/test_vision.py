@@ -50,6 +50,11 @@ def page(**overrides):
 
 
 class VisionComparisonTests(unittest.TestCase):
+    def test_context_budget_accounts_for_model_image_encoder_tokens(self):
+        self.assertEqual(vision.model_options("granite3.2-vision:2b")["num_ctx"], 12288)
+        self.assertEqual(vision.model_options("qwen3-vl:2b-instruct-q4_K_M")["num_ctx"], 4096)
+        self.assertEqual(vision.model_options("granite3.2-vision:2b")["num_batch"], 128)
+
     def test_quantity_prefix_only_normalizes_when_it_matches_separate_quantity(self):
         self.assertEqual(
             vision.item_key({"description": "2.0 x Widget", "quantity": "2"}), "widget"

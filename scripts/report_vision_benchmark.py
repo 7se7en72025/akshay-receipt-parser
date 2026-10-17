@@ -143,7 +143,10 @@ the verbatim date remains available in the read-only page reading for review.
 Hardware: 16 GB RAM, NVIDIA RTX 3050 Laptop GPU with 4 GB VRAM. Official portable
 Ollama v0.40.5. Models are local Apache-2.0 releases; one model is loaded at a time.
 Final prompt: `{vision.PROMPT_VERSION}`; image longest edge {vision.IMAGE_EDGE}px;
-options: `{json.dumps(vision.MODEL_OPTIONS, sort_keys=True)}`.
+shared generation options: `{json.dumps(vision.MODEL_OPTIONS, sort_keys=True)}`.
+Granite uses a 12288-token context because its image encoder needs about 8k input
+tokens for these A4 pages; Qwen uses 4096. Both get the same image, prompt and
+2048-token output limit. Exact per-model options are recorded in the JSON report.
 Reported latency excludes downloads and idle pauses. Sustained laptop GPU heat
 reduced clock speeds during testing; later requests used cooldown pauses. These
 timings are indicative observations, not a controlled hardware speed comparison.
