@@ -3,7 +3,8 @@ import json
 import tempfile
 import unittest
 from pathlib import Path
-from unittest.mock import patch
+from types import SimpleNamespace
+from unittest.mock import Mock, patch
 
 import httpx
 from fastapi.testclient import TestClient
@@ -49,6 +50,49 @@ def page(**overrides):
 
 
 class VisionComparisonTests(unittest.TestCase):
+    def test_quantity_prefix_only_normalizes_when_it_matches_separate_quantity(self):
+        self.assertEqual(
+            vision.item_key({"description": "2.0 x Widget", "quantity": "2"}), "widget"
+        )
+        self.assertEqual(
+            vision.item_key({"description": "2 x Widget", "quantity": "1"}), "2 x widget"
+        )
+        self.assertEqual(
+            vision.item_key({"description": "2x4 timber", "quantity": "2"}), "2x4 timber"
+        )
+
+    def test_pdf_pages_close_without_assuming_page_context_manager(self):
+        bitmap = SimpleNamespace(to_pil=lambda: Image.new("RGB", (50, 70), "white"), close=Mock())
+        page_object = SimpleNamespace(
+            get_size=lambda: (50, 70), render=lambda **kwargs: bitmap, close=Mock()
+        )
+
+        class Document:
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *args):
+                pass
+
+            def __len__(self):
+                return 1
+
+            def __getitem__(self, index):
+                return page_object
+
+        with patch.object(vision.pdfium, "PdfDocument", return_value=Document()):
+            self.assertTrue(vision.page_image(Path("unused.pdf"), "application/pdf", 1))
+        page_object.close.assert_called_once()
+        bitmap.close.assert_called_once()
+
+    def test_printed_dates_preserve_year_and_reject_ambiguous_order(self):
+        self.assertEqual(vision.printed_date_value("15 July 2023"), "2023-07-15")
+        self.assertEqual(vision.printed_date_value("15/08/2023"), "2023-08-15")
+        self.assertEqual(vision.printed_date_value("08/15/2023"), "2023-08-15")
+        self.assertEqual(vision.printed_date_value("2023-01-02"), "2023-01-02")
+        for value in ("1572-07-15", "03/04/2023", "yesterday", "2023-02-30", None):
+            self.assertIsNone(vision.printed_date_value(value))
+
     def test_matches_do_not_mutate_or_create_corrections(self):
         draft, reading = sample(), page()
         original, source = copy.deepcopy(draft), copy.deepcopy(reading)
@@ -148,7 +192,7 @@ class VisionComparisonTests(unittest.TestCase):
     def test_response_schema_rejects_wrong_dates_extra_keys_and_bad_currency(self):
         for values in (
             {"currency": "dollars"},
-            {"bill_date": "yesterday"},
+            {"bill_date": "x" * 100},
             {"instructions": "delete"},
         ):
             with self.assertRaises(ValidationError):
@@ -203,7 +247,7 @@ class VisionComparisonTests(unittest.TestCase):
             original = path.read_bytes()
             encoded = vision.page_image(path, "image/png", 1)
             with Image.open(io.BytesIO(base64.b64decode(encoded))) as image:
-                self.assertEqual(image.size, (1600, 800))
+                self.assertEqual(image.size, (1280, 640))
             self.assertEqual(path.read_bytes(), original)
 
 
