@@ -47,6 +47,10 @@ For frontend development, run the backend as above and run bun run dev from fron
 - Upload .xlsx templates, choose worksheet/headings/insertion row and map output columns.
 - Template exports refuse occupied or merged destination cells instead of overwriting them.
 - Export history records document versions and the template configuration used.
+- Search every saved bill by filename, bill number, supplier, GSTIN or purchase number.
+- Filter by bill dates and status, sort by upload date, bill date or amount, and browse 25 bills per page.
+- Lightweight inbox responses exclude product rows; full records load when you open a bill.
+- Keep the last upload report available with per-file errors and links to duplicate bills.
 
 ## Using the workspace
 
@@ -59,6 +63,12 @@ For frontend development, run the backend as above and run bun run dev from fron
 7. Select approved bills and create a workbook. Choose the standard workbook or a saved template.
 
 Editing an approved record reopens the draft. It must be approved again before another export.
+
+Inbox counts and approved value cover the current search and bill-date range across all pages; status tabs then narrow the bill list. Bills without a date are excluded when a date filter is set. Clear filters to show them again. Search treats `%` and `_` as literal characters.
+
+Previous bill and Next bill follow the inbox page you opened, even if an approved bill leaves the Needs review tab. Go back to the inbox to browse another page. Selection can span pages, up to 200 approved bills per export; Clear selection removes the complete selection. The server checks approval again before exporting.
+
+Last upload keeps the most recent upload report available during the current browser session. The report is replaced by the next upload and cleared on page reload; uploaded originals and processing results remain in the database.
 
 Use Ctrl+S (Cmd+S on macOS) to save an edited draft. Leaving through the sidebar or closing/reloading the tab warns about unsaved changes. Reload saved discards local edits only after confirmation and is useful after a version conflict.
 
