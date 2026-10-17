@@ -17,9 +17,9 @@ from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from fastapi.responses import FileResponse, HTMLResponse, Response
 from fastapi.staticfiles import StaticFiles
 from PIL import Image
-from pydantic import BaseModel
+from pydantic import BaseModel, Field, ValidationError
 
-from . import ai, worker
+from . import ai, verification, vision, worker
 from . import database as store
 from .config import (
     EXPORTS,
@@ -43,8 +43,12 @@ logging.basicConfig(level=logging.INFO)
 async def lifespan(app):
     store.initialize()
     thread = worker.start()
-    yield
-    worker.stop(thread)
+    vision_thread = verification.start()
+    try:
+        yield
+    finally:
+        verification.stop(vision_thread)
+        worker.stop(thread)
 
 
 app = FastAPI(title="Akshay invoice workspace", version="0.1.0", lifespan=lifespan)
@@ -127,6 +131,7 @@ def health():
         "status": "ok",
         "workspace": "local",
         "ai": ai.capabilities(),
+        "vision": vision.capabilities(),
         "ocr_installed": importlib.util.find_spec("rapidocr") is not None,
         "limits": {"file_mb": 15, "batch_files": MAX_BATCH_FILES, "pages": 25},
         "export_fields": FIELDS,
@@ -386,7 +391,9 @@ def restore(document_id: str, event_id: str, payload: RestoreRequest):
     )
 
 
-def save_document(document_id, payload, approve=False, action=None, restore_event_id=None):
+def save_document(
+    document_id, payload, approve=False, action=None, restore_event_id=None, audit_detail=None
+):
     document = document_or_404(document_id)
     if document["status"] in {"queued", "processing"}:
         raise HTTPException(409, "Wait for processing to finish before editing.")
@@ -431,6 +438,7 @@ def save_document(document_id, payload, approve=False, action=None, restore_even
                 "invoice": payload.invoice.model_dump(mode="json"),
                 "review_note": payload.review_note if approve else "",
                 "restored_from": restore_event_id,
+                **(audit_detail or {}),
             },
         )
     return get_document(document_id)
@@ -439,6 +447,77 @@ def save_document(document_id, payload, approve=False, action=None, restore_even
 @app.put("/api/documents/{document_id}")
 def save(document_id: str, payload: SaveRequest):
     return save_document(document_id, payload)
+
+
+class VerifyRequest(BaseModel):
+    version: int = Field(ge=1)
+    model: str = Field(min_length=1, max_length=150)
+
+
+class AcceptSuggestionsRequest(BaseModel):
+    version: int = Field(ge=1)
+    selected: list[str] = Field(min_length=1, max_length=1500)
+
+
+@app.post("/api/documents/{document_id}/verifications", status_code=202)
+def verify_document(document_id: str, payload: VerifyRequest):
+    document = document_or_404(document_id)
+    try:
+        return verification.enqueue(document, payload.model, payload.version)
+    except ValueError as error:
+        raise HTTPException(409, str(error)) from error
+
+
+@app.get("/api/documents/{document_id}/verifications")
+def verification_history(document_id: str):
+    document = document_or_404(document_id)
+    with store.connection() as db:
+        rows = db.execute(
+            "SELECT * FROM verification_jobs WHERE document_id=? ORDER BY created_at DESC LIMIT 10",
+            (document_id,),
+        ).fetchall()
+    return [verification.present(row, document["version"]) for row in rows]
+
+
+def verification_or_404(document_id, job_id):
+    document = document_or_404(document_id)
+    with store.connection() as db:
+        row = db.execute(
+            "SELECT * FROM verification_jobs WHERE id=? AND document_id=?", (job_id, document_id)
+        ).fetchone()
+    if not row:
+        raise HTTPException(404, "Verification report not found.")
+    return document, verification.present(row, document["version"])
+
+
+@app.get("/api/documents/{document_id}/verifications/{job_id}")
+def verification_result(document_id: str, job_id: str):
+    return verification_or_404(document_id, job_id)[1]
+
+
+@app.post("/api/documents/{document_id}/verifications/{job_id}/apply")
+def accept_ai_suggestions(document_id: str, job_id: str, payload: AcceptSuggestionsRequest):
+    document, job = verification_or_404(document_id, job_id)
+    if job["stale"] or document["version"] != payload.version:
+        raise HTTPException(409, "Draft changed since verification. Run a new verification.")
+    if document["status"] == "approved":
+        raise HTTPException(409, "Restore this bill as a draft before applying suggestions.")
+    if job["status"] not in {"completed", "partial"}:
+        raise HTTPException(409, "Wait for verification to finish before applying suggestions.")
+    try:
+        invoice = Invoice.model_validate(
+            vision.apply_suggestions(document["invoice"], job["result"]["report"], payload.selected)
+        )
+    except (ValueError, KeyError, IndexError, ValidationError) as error:
+        raise HTTPException(
+            422, "Invalid suggestions. Review the report and select valid values."
+        ) from error
+    return save_document(
+        document_id,
+        SaveRequest(invoice=invoice, version=payload.version),
+        action="ai_suggestions_applied",
+        audit_detail={"job_id": job_id, "model": job["model"], "selected": payload.selected},
+    )
 
 
 @app.post("/api/documents/{document_id}/approve")

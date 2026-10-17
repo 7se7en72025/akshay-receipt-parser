@@ -58,6 +58,15 @@ def initialize():
         CREATE INDEX IF NOT EXISTS documents_bill_number
           ON documents(lower(json_extract(invoice_json,'$.bill_number')));
         CREATE INDEX IF NOT EXISTS events_document ON review_events(document_id, created_at DESC);
+        CREATE TABLE IF NOT EXISTS verification_jobs (
+          id TEXT PRIMARY KEY, document_id TEXT NOT NULL REFERENCES documents(id),
+          document_version INTEGER NOT NULL, model TEXT NOT NULL, status TEXT NOT NULL,
+          snapshot_json TEXT NOT NULL, result_json TEXT NOT NULL DEFAULT '{}',
+          completed_pages INTEGER NOT NULL DEFAULT 0, error TEXT,
+          created_at TEXT NOT NULL, updated_at TEXT NOT NULL
+        );
+        CREATE INDEX IF NOT EXISTS verification_document
+          ON verification_jobs(document_id,created_at DESC);
         """)
         columns = {row["name"] for row in db.execute("PRAGMA table_info(documents)")}
         if "source_currency" not in columns:
@@ -65,7 +74,10 @@ def initialize():
         db.execute("""UPDATE documents SET source_currency=coalesce(
             json_extract(invoice_json,'$.currency'),'INR') WHERE source_currency IS NULL
             AND status NOT IN ('queued','processing')""")
-        db.execute("PRAGMA user_version=2")
+        db.execute("PRAGMA user_version=3")
+        db.execute("""UPDATE verification_jobs SET status='failed',
+            error='Verification interrupted when the app stopped. Run it again.'
+            WHERE status='running'""")
         # This is a single-process local workspace. Recover interrupted jobs on startup.
         db.execute("UPDATE documents SET status='queued', error=NULL WHERE status='processing'")
 
