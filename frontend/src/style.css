@@ -2224,6 +2224,18 @@ summary:focus-visible {
   margin: 12px 0;
   overflow-wrap: anywhere;
 }
+.vision-readings section {
+  padding: 12px 0;
+  border-bottom: 1px solid var(--border);
+}
+.vision-readings .table-wrap {
+  max-height: 320px;
+  overflow: auto;
+}
+.vision-readings td {
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
 @media (max-width: 560px) {
   .vision-check dl {
     grid-template-columns: 1fr;

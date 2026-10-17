@@ -47,6 +47,8 @@ An existing Ollama installation on port 11434 can also be used by changing the U
    separate persisted queue; leaving the review panel does not cancel a job.
 3. Inspect differences against the original page. Agreements are also available
    using **Show agreeing fields**. Model agreement does not establish correctness.
+   **Independent AI page readings** shows all read rows, including unmatched ones,
+   and the verbatim printed date. It is read-only; no rows are inserted silently.
 4. Select individual editable suggestions and choose **Apply … suggestions to
    draft**. The app asks for confirmation, saves a new unapproved version and
    records the model, report ID and selected fields in history.

@@ -19,9 +19,25 @@ interface Job {
   status: "queued" | "running" | "completed" | "partial" | "failed";
   completed_pages: number;
   stale: boolean;
+  outdated: boolean;
   error: string | null;
   result: {
-    pages?: { page: number }[];
+    pages?: {
+      page: number;
+      printed_date?: string | null;
+      reading: {
+        supplier_name: string | null;
+        bill_number: string | null;
+        bill_date: string | null;
+        currency: string | null;
+        items: {
+          description: string | null;
+          quantity: string | null;
+          unit_price: string | null;
+          amount: string | null;
+        }[];
+      };
+    }[];
     total_pages?: number;
     errors?: { page: number; error: string }[];
     report?: {
@@ -235,8 +251,8 @@ export function Verification({
       )}
       {stale && (
         <div className="info-note">
-          This report belongs to an older draft. Run verification again before
-          applying suggestions.
+          This report belongs to an older draft or uses older AI reading
+          settings. Run verification again before applying suggestions.
         </div>
       )}
       {job?.error && <div className="info-note">{job.error}</div>}
@@ -312,6 +328,70 @@ export function Verification({
                   <li key={notice}>{notice}</li>
                 ))}
               </ul>
+            </details>
+          )}
+          {!!job?.result.pages?.length && (
+            <details className="vision-readings">
+              <summary>
+                Independent AI page readings ({job.result.pages.length})
+              </summary>
+              <p>
+                Read-only model output. These rows have not been saved to your
+                draft. Check the original before adding or changing any entry.
+              </p>
+              {job.result.pages.map((entry) => (
+                <section key={entry.page}>
+                  <button
+                    className="text-button"
+                    onClick={() => onPage(entry.page)}
+                  >
+                    Inspect original page {entry.page}
+                  </button>
+                  <p>
+                    {entry.reading.supplier_name || "Seller unreadable"} ·{" "}
+                    {entry.reading.bill_number || "Bill number unreadable"} ·{" "}
+                    {entry.reading.currency || "Currency unclear"}
+                  </p>
+                  <p>
+                    Printed date:{" "}
+                    {entry.printed_date ||
+                      entry.reading.bill_date ||
+                      "Not readable"}
+                    {!entry.reading.bill_date && entry.printed_date
+                      ? " (requires manual interpretation)"
+                      : ""}
+                  </p>
+                  <div className="table-wrap">
+                    <table>
+                      <thead>
+                        <tr>
+                          <th>AI description</th>
+                          <th>Quantity</th>
+                          <th>Printed unit rate</th>
+                          <th>Printed line amount</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {entry.reading.items.map((item, index) => (
+                          <tr key={index}>
+                            <td>{item.description || "Not readable"}</td>
+                            <td>
+                              {item.quantity ?? "Not printed / unreadable"}
+                            </td>
+                            <td>
+                              {item.unit_price ?? "Not printed / unreadable"}
+                            </td>
+                            <td>{item.amount ?? "Not printed / unreadable"}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                  {!entry.reading.items.length && (
+                    <p>No product rows were independently read on this page.</p>
+                  )}
+                </section>
+              ))}
             </details>
           )}
           <button
