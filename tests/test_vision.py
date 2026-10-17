@@ -59,10 +59,15 @@ class VisionComparisonTests(unittest.TestCase):
         with (
             patch.object(vision, "VISION_MODELS", ("test",)),
             patch.object(vision, "page_image", return_value="aW1hZ2U="),
-            patch.object(httpx.Client, "post", return_value=response),
+            patch.object(httpx.Client, "post", return_value=response) as post,
         ):
             result = vision.read_page("unused", "image/png", 1, "test")
         self.assertEqual(result["reading"]["grand_total"], "118.00")
+        request = post.call_args.kwargs["json"]
+        self.assertEqual(request["format"], vision.PageReading.model_json_schema())
+        self.assertEqual(request["messages"], [
+            {"role": "user", "content": vision.PROMPT, "images": ["aW1hZ2U="]}
+        ])
         self.assertEqual(result["raw_reading"]["grand_total"], "$118.00")
         self.assertEqual(result["normalization_version"], vision.NORMALIZATION_VERSION)
 
