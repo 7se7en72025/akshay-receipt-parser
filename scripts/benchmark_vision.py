@@ -6,6 +6,7 @@ deliberately do not print labels such as net subtotal, tax or unit price.
 """
 
 import argparse
+import ctypes
 import hashlib
 import json
 import os
@@ -25,6 +26,50 @@ os.environ.setdefault("AKSHAY_VISION_MODELS", ",".join(MODELS))
 CACHE = (
     Path(os.environ.get("AKSHAY_AI_HOME", "D:/KyvernoBuild/akshay-local-ai")) / "benchmark-new100"
 )
+
+
+def free_memory_gb():
+    """Windows available physical memory, including reclaimable standby pages."""
+    if sys.platform != "win32":
+        return None
+
+    class MemoryStatus(ctypes.Structure):
+        _fields_ = [("length", ctypes.c_ulong), ("load", ctypes.c_ulong)] + [
+            (name, ctypes.c_ulonglong) for name in (
+                "total_physical", "available_physical", "total_pagefile",
+                "available_pagefile", "total_virtual", "available_virtual", "extended",
+            )
+        ]
+
+    status = MemoryStatus()
+    status.length = ctypes.sizeof(status)
+    if not ctypes.windll.kernel32.GlobalMemoryStatusEx(ctypes.byref(status)):
+        raise OSError("Cannot read available memory; refusing to start a model request.")
+    return status.available_physical / 1024**3
+
+
+def require_memory(available, loaded):
+    # The measured Qwen runtime on this laptop used ~2.5 GB of system RAM.
+    # Leave headroom for that allocation and Windows when loading cold.
+    minimum = 1.5 if loaded else 4.5
+    if available is not None and available < minimum:
+        raise RuntimeError(
+            f"Evaluation stopped before the next bill: {available:.2f} GB RAM available; "
+            f"at least {minimum:.1f} GB required. Completed readings are cached. "
+            "Free memory and rerun the same command to resume. "
+            "This is not a model failure or a completed 100-bill evaluation."
+        )
+
+
+def check_resources(model, url):
+    available = free_memory_gb()
+    if available is None:
+        return
+    with httpx.Client(trust_env=False, timeout=5) as client:
+        response = client.get(url + "/api/ps")
+        response.raise_for_status()
+        loaded = any(entry.get("name") == model for entry in response.json()["models"])
+    require_memory(available, loaded)
 
 
 def reference(row, visible=False):
@@ -237,6 +282,13 @@ def main():
                 ]
             if model != "ocr-baseline":
                 time.sleep(args.pause_seconds)
+                # Outside the inference try/except: a resource pause must not be
+                # recorded as a model attempt or replace a previous valid reading.
+                try:
+                    check_resources(model, vision.OLLAMA_URL)
+                except RuntimeError as error:
+                    summarize(manifest, model_dir, model, len(rows))
+                    parser.exit(3, str(error) + "\n")
             started = time.monotonic()
             try:
                 # The source image and shared prompt are the only inputs.
