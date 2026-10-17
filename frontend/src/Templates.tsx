@@ -24,12 +24,14 @@ export function Templates({
   notify,
   onRefresh,
   onDirty,
+  defaultFormat,
 }: {
   templates: Template[];
   fields: Record<string, string>;
   notify: Notify;
   onRefresh: () => Promise<void>;
   onDirty: (dirty: boolean) => void;
+  defaultFormat?: { sheets: Record<string, string[]> };
 }) {
   const [selected, setSelected] = useState("");
   const [inspection, setInspection] = useState<TemplateInspection | null>(null);
@@ -211,6 +213,47 @@ export function Templates({
           event.target.files?.[0] && void upload(event.target.files[0])
         }
       />
+      <div className="panel default-format-card">
+        <div className="default-format-heading">
+          <span className="file-icon excel">
+            <FileSpreadsheet size={25} />
+          </span>
+          <div>
+            <h3>Default Excel format</h3>
+            <p>Built in · Fixed columns · No setup needed</p>
+          </div>
+          <span className="status approved">
+            <ShieldCheck size={13} />
+            Always available
+          </span>
+        </div>
+        <p>
+          Export approved bills into Line Items and Bill Summary. This built-in
+          format cannot be remapped or edited in the app. Custom workbooks are a
+          separate option below.
+        </p>
+        <a className="button secondary" href="/api/templates/default/download">
+          Download blank format
+        </a>
+        <details className="default-format-columns">
+          <summary>View fixed columns</summary>
+          {Object.entries(defaultFormat?.sheets || {}).map(
+            ([name, columns]) => (
+              <section key={name}>
+                <h4>{name}</h4>
+                <div>
+                  {columns.map((column) => (
+                    <span key={column}>{column}</span>
+                  ))}
+                </div>
+              </section>
+            ),
+          )}
+          {!defaultFormat && (
+            <p>Column preview will load when the local backend connects.</p>
+          )}
+        </details>
+      </div>
       <div className="notice info-note">
         <ShieldCheck size={22} />
         <div>

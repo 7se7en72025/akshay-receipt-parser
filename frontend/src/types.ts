@@ -1,5 +1,7 @@
 export type Amount = string | null;
 export interface Item {
+  secondary_amount: Amount;
+  secondary_currency: string;
   description: string;
   hsn: string;
   quantity: Amount;
@@ -18,6 +20,15 @@ export interface Item {
   source_page: number;
 }
 export interface Invoice {
+  currency: string;
+  other_tax_total: Amount;
+  charges_total: Amount;
+  discount_total: Amount;
+  withholding_total: Amount;
+  amounts_include_tax: boolean;
+  secondary_currency: string | null;
+  secondary_subtotal: Amount;
+  exchange_rate: Amount;
   supplier_name: string;
   supplier_gstin: string;
   bill_number: string;
@@ -63,6 +74,11 @@ export interface Document {
   history?: { id: string; action: string; created_at: string }[];
 }
 export interface Health {
+  default_format: {
+    name: string;
+    version: number;
+    sheets: Record<string, string[]>;
+  };
   status: string;
   workspace: string;
   ocr_installed: boolean;
@@ -84,7 +100,7 @@ export type DocumentSummary = Pick<
 > & {
   invoice: Pick<
     Invoice,
-    "supplier_name" | "bill_number" | "bill_date" | "grand_total"
+    "supplier_name" | "bill_number" | "bill_date" | "grand_total" | "currency"
   >;
 };
 export interface InboxPage {
@@ -142,6 +158,8 @@ export interface ExportRecord {
 }
 export type Notify = (message: string, error?: boolean) => void;
 export const emptyItem = (): Item => ({
+  secondary_amount: null,
+  secondary_currency: "",
   description: "",
   hsn: "",
   quantity: null,

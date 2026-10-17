@@ -446,6 +446,7 @@ export default function App() {
             <Templates
               templates={templates}
               fields={health?.export_fields || {}}
+              defaultFormat={health?.default_format}
               notify={notify}
               onDirty={setHasUnsavedChanges}
               onRefresh={refreshTemplates}
@@ -888,7 +889,10 @@ export default function App() {
                               {day(doc.invoice.bill_date)}
                             </td>
                             <td className="align-right amount">
-                              {money(doc.invoice.grand_total)}
+                              {money(
+                                doc.invoice.grand_total,
+                                doc.invoice.currency,
+                              )}
                             </td>
                             <td>
                               <Status status={doc.status} />
@@ -1123,7 +1127,9 @@ function ExportDialog({
                 value={template}
                 onChange={(event) => setTemplate(event.target.value)}
               >
-                <option value="">Standard · Line Items + Bill Summary</option>
+                <option value="">
+                  Default format (fixed) · Line Items + Bill Summary
+                </option>
                 {templates
                   .filter(
                     (item) =>

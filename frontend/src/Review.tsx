@@ -340,6 +340,18 @@ export function Review({
           )}
         </div>
       </div>
+      {!processing && invoice.currency !== "INR" && (
+        <div className="notice error-note">
+          <AlertTriangle size={21} />
+          <div>
+            <strong>Foreign-currency source · Review only</strong>
+            <p>
+              This bill is in {invoice.currency}. Approval and INR export are
+              blocked. The source currency cannot be relabelled as INR.
+            </p>
+          </div>
+        </div>
+      )}
       {processing && (
         <div className="notice processing-note">
           <LoaderCircle size={20} className="spin" />
@@ -397,7 +409,8 @@ export function Review({
           Bill date <strong>{day(invoice.bill_date)}</strong>
         </span>
         <span>
-          Grand total <strong>{money(invoice.grand_total)}</strong>
+          Grand total{" "}
+          <strong>{money(invoice.grand_total, invoice.currency)}</strong>
         </span>
         <button
           onClick={() => setTab("checks")}
@@ -513,7 +526,7 @@ export function Review({
               >
                 <div className="section-title">
                   <h3>Supplier & bill</h3>
-                  <span>INR</span>
+                  <span>{invoice.currency} · Source currency</span>
                 </div>
                 <div className="form-grid">
                   <Field
@@ -548,6 +561,23 @@ export function Review({
                   <h3>Bill totals</h3>
                   <span>As printed on the bill</span>
                 </div>
+                {invoice.secondary_currency && (
+                  <p className="info-note">
+                    Original subtotal:{" "}
+                    {money(
+                      invoice.secondary_subtotal,
+                      invoice.secondary_currency,
+                    )}{" "}
+                    · Printed exchange rate: {invoice.exchange_rate}. Printed
+                    source entries remain unchanged.
+                  </p>
+                )}
+                {invoice.amounts_include_tax && (
+                  <p className="info-note">
+                    Item amounts include tax. The taxable subtotal is shown
+                    separately; printed item amounts are preserved.
+                  </p>
+                )}
                 <div className="form-grid">
                   {[
                     ["taxable_total", "Taxable total"],
@@ -557,10 +587,14 @@ export function Review({
                     ["cess_total", "Cess total"],
                     ["round_off", "Round off"],
                     ["grand_total", "Grand total"],
+                    ["other_tax_total", "Other tax / VAT"],
+                    ["charges_total", "Shipping & other charges"],
+                    ["discount_total", "Bill discount"],
+                    ["withholding_total", "Withholding tax"],
                   ].map(([key, label]) => (
                     <Field
                       key={key}
-                      label={label + " (₹)"}
+                      label={label + " (" + invoice.currency + ")"}
                       type="number"
                       value={invoice[key as keyof Invoice] as string | null}
                       onChange={(value) =>
@@ -644,7 +678,11 @@ export function Review({
                         onChange={(value) => setItem(index, "unit", value)}
                       />
                       <Field
-                        label="Rate (₹)"
+                        label={
+                          "Rate (" +
+                          (invoice.secondary_currency || invoice.currency) +
+                          ")"
+                        }
                         value={item.unit_price}
                         type="number"
                         onChange={(value) =>
@@ -652,7 +690,16 @@ export function Review({
                         }
                       />
                       <Field
-                        label="Taxable amount (₹)"
+                        label={
+                          invoice.amounts_include_tax
+                            ? "Printed amount including tax"
+                            : "Printed item amount (" +
+                              (item.secondary_currency
+                                ? invoice.currency
+                                : invoice.secondary_currency ||
+                                  invoice.currency) +
+                              ")"
+                        }
                         value={item.taxable_amount}
                         type="number"
                         onChange={(value) =>
@@ -660,7 +707,7 @@ export function Review({
                         }
                       />
                       <Field
-                        label="CGST amount (₹)"
+                        label={"CGST amount (" + invoice.currency + ")"}
                         value={item.cgst_amount}
                         type="number"
                         onChange={(value) =>
@@ -668,7 +715,7 @@ export function Review({
                         }
                       />
                       <Field
-                        label="SGST amount (₹)"
+                        label={"SGST amount (" + invoice.currency + ")"}
                         value={item.sgst_amount}
                         type="number"
                         onChange={(value) =>
@@ -676,7 +723,7 @@ export function Review({
                         }
                       />
                       <Field
-                        label="IGST amount (₹)"
+                        label={"IGST amount (" + invoice.currency + ")"}
                         value={item.igst_amount}
                         type="number"
                         onChange={(value) =>
@@ -684,7 +731,7 @@ export function Review({
                         }
                       />
                       <Field
-                        label="Cess amount (₹)"
+                        label={"Cess amount (" + invoice.currency + ")"}
                         value={item.cess_amount}
                         type="number"
                         onChange={(value) =>
@@ -698,6 +745,15 @@ export function Review({
                         Discount 1 and 2 preserve the printed columns. Confirm
                         their meaning before approval.
                       </p>
+                      {item.secondary_currency && (
+                        <p>
+                          Original printed amount:{" "}
+                          {money(
+                            item.secondary_amount,
+                            item.secondary_currency,
+                          )}
+                        </p>
+                      )}
                       <div className="form-grid">
                         {[
                           ["cgst_rate", "CGST %"],
@@ -874,7 +930,7 @@ export function Review({
                 disabled={!health?.ai.available || !!busy || dirty}
                 title={
                   health?.ai.available
-                    ? "Replace this draft with local AI-assisted extraction"
+                    ? "Re-extract the source and let local AI fill missing fields; existing source values are preserved"
                     : "Optional local AI is not configured"
                 }
                 onClick={() => void retry(true)}

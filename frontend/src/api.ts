@@ -47,12 +47,15 @@ export async function api<T>(
 }
 export const message = (error: unknown) =>
   error instanceof Error ? error.message : "Something went wrong.";
-export const money = (value: string | number | null | undefined) =>
+export const money = (
+  value: string | number | null | undefined,
+  currency = "INR",
+) =>
   value == null || value === ""
     ? "—"
     : new Intl.NumberFormat("en-IN", {
         style: "currency",
-        currency: "INR",
+        currency,
         maximumFractionDigits: 2,
       }).format(Number(value));
 export const day = (value: string | null | undefined) =>

@@ -103,11 +103,11 @@ export function History({
                   </div>
                   <div>
                     <dt>Taxable total</dt>
-                    <dd>{money(invoice.taxable_total)}</dd>
+                    <dd>{money(invoice.taxable_total, invoice.currency)}</dd>
                   </div>
                   <div>
                     <dt>Grand total</dt>
-                    <dd>{money(invoice.grand_total)}</dd>
+                    <dd>{money(invoice.grand_total, invoice.currency)}</dd>
                   </div>
                 </dl>
                 <div className="table-wrap">
@@ -126,7 +126,15 @@ export function History({
                           <td>
                             {item.quantity ?? "—"} {item.unit}
                           </td>
-                          <td>{money(item.taxable_amount)}</td>
+                          <td>
+                            {money(
+                              item.taxable_amount,
+                              item.secondary_currency
+                                ? invoice.currency
+                                : invoice.secondary_currency ||
+                                    invoice.currency,
+                            )}
+                          </td>
                         </tr>
                       ))}
                     </tbody>
