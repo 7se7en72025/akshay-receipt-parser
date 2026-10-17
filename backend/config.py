@@ -22,5 +22,17 @@ MAX_PAGES = 25
 MAX_IMAGE_PIXELS = 25_000_000
 OLLAMA_URL = os.environ.get("AKSHAY_OLLAMA_URL", "http://127.0.0.1:11434").rstrip("/")
 OLLAMA_MODEL = os.environ.get("AKSHAY_OLLAMA_MODEL", "")
+VISION_MODEL = os.environ.get("AKSHAY_VISION_MODEL", "")
+VISION_MODELS = tuple(
+    dict.fromkeys(
+        filter(
+            None,
+            (
+                value.strip()
+                for value in os.environ.get("AKSHAY_VISION_MODELS", VISION_MODEL).split(",")
+            ),
+        )
+    )
+)
 if urlparse(OLLAMA_URL).hostname not in {"localhost", "127.0.0.1", "::1"}:
     raise RuntimeError("This local workspace accepts only a loopback Ollama endpoint.")
