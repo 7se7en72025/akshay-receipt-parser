@@ -11,6 +11,7 @@ import hashlib
 import json
 import os
 import statistics
+import subprocess
 import sys
 import time
 from collections import Counter
@@ -48,10 +49,32 @@ def free_memory_gb():
     return status.available_physical / 1024**3
 
 
-def require_memory(available, loaded):
+def free_gpu_memory_gb():
+    try:
+        result = subprocess.run(
+            ["nvidia-smi", "--query-gpu=memory.free", "--format=csv,noheader,nounits"],
+            capture_output=True, text=True, timeout=3, check=True,
+            creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
+        )
+        # Only use the lower system-RAM floor on the measured single-GPU setup.
+        values = [float(line.strip()) / 1024 for line in result.stdout.splitlines()]
+        return values[0] if len(values) == 1 else None
+    except (OSError, subprocess.SubprocessError, ValueError):
+        return None
+
+
+def require_memory(available, loaded, gpu_free=None, model=None):
     # The measured Qwen runtime on this laptop used ~2.5 GB of system RAM.
     # Leave headroom for that allocation and Windows when loading cold.
     minimum = 1.5 if loaded else 4.5
+    # This exact Qwen quantization occupies ~2.1 GB when fully GPU-resident.
+    # With >=3 GB VRAM free it need not use the earlier partial CPU offload;
+    # retain 2.5 GB physical RAM at cold start and the loaded 1.5 GB floor.
+    if (
+        not loaded and model == MODELS[0]
+        and gpu_free is not None and gpu_free >= 3.0
+    ):
+        minimum = 2.5
     if available is not None and available < minimum:
         raise RuntimeError(
             f"Evaluation stopped before the next bill: {available:.2f} GB RAM available; "
@@ -69,7 +92,7 @@ def check_resources(model, url):
         response = client.get(url + "/api/ps")
         response.raise_for_status()
         loaded = any(entry.get("name") == model for entry in response.json()["models"])
-    require_memory(available, loaded)
+    require_memory(available, loaded, free_gpu_memory_gb() if not loaded else None, model)
 
 
 def reference(row, visible=False):

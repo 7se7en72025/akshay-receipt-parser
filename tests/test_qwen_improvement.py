@@ -28,6 +28,16 @@ class PairedQwenTests(unittest.TestCase):
         require_memory(4.6, False)
         require_memory(None, False)
 
+    def test_qwen_cold_start_can_use_available_gpu_memory(self):
+        model = "qwen3-vl:2b-instruct-q4_K_M"
+        require_memory(2.6, False, gpu_free=3.1, model=model)
+        for available, gpu_free, selected in (
+            (2.4, 3.1, model), (2.6, 2.9, model),
+            (2.6, None, model), (2.6, 3.1, "granite3.2-vision:2b"),
+        ):
+            with self.assertRaises(RuntimeError):
+                require_memory(available, False, gpu_free=gpu_free, model=selected)
+
     def test_fixed_and_regressed_fields_are_both_reported(self):
         before = fixture()
         after = copy.deepcopy(before)

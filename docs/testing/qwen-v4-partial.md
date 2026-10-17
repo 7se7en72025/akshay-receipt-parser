@@ -31,7 +31,9 @@ Resume when sufficient RAM is available:
 ```
 
 The same command reuses completed readings. A cold model requires 4.5 GB
-available RAM; between requests, the loaded model requires 1.5 GB headroom.
+available RAM by default. This exact Qwen quantization can start with 2.5 GB
+available system RAM when a single NVIDIA GPU has at least 3 GB VRAM free.
+Between requests, the loaded model requires 1.5 GB system-RAM headroom.
 These are conservative local benchmark limits, not universal model requirements.
 The complete report publisher refuses partial runs; after 100 attempts, run the
 real API smoke check before publishing the Qwen comparison.
