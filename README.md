@@ -186,6 +186,14 @@ The public evaluation downloads 100 distinct synthetic invoices from a pinned re
 
 See [the evaluation report](docs/testing/100-bill-evaluation.md) for scope and results. `--strict` allows one documented source exchange-rate rounding discrepancy only when flagged for review; it does not count that case as an exact extraction. Any other mismatch fails the command.
 
+The [200-bill regression and vision comparison](docs/testing/200-bill-vision-comparison.md)
+adds 100 distinct source images, tested with the same OCR path and two local models.
+Qwen read 97.1% of visible values correctly, with 38/100 complete printed-field
+contracts exact; Granite read 40.8%, including 16 timed-out responses as failures.
+These are debugging-set results, not production guarantees. Qwen remains the default;
+every bill still needs human review. Per-bill mismatches, source checksums, model
+digests and reproduction commands are included in the report.
+
 Foreign-currency documents can be reviewed but cannot be approved or exported as INR. Their source currency is stored separately and cannot be relabelled through a save request. Printed item amounts and totals are retained; VAT-inclusive normalization and dual-currency calculations are disclosed in extraction notes. New layouts, languages and unclear photos still require human review.
 
 POS integration, live inventory, student shopping and historical POS database migration are not part of this invoice MVP.
