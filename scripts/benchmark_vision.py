@@ -148,6 +148,12 @@ def main():
     parser.add_argument("--model", choices=MODELS)
     parser.add_argument("--retry-errors", action="store_true")
     parser.add_argument(
+        "--pause-seconds",
+        type=float,
+        default=5,
+        help="Idle time between model requests to limit sustained laptop heat; excluded from inference latency.",
+    )
+    parser.add_argument(
         "--refresh",
         action="store_true",
         help="Re-run cached inputs, retaining prior attempts in their local result files.",
@@ -160,6 +166,8 @@ def main():
     args = parser.parse_args()
     if not 1 <= args.limit <= 100:
         parser.error("--limit must be between 1 and 100")
+    if not 0 <= args.pause_seconds <= 60:
+        parser.error("--pause-seconds must be between 0 and 60")
     from backend import vision
 
     manifest = json.loads((CACHE / "manifest.json").read_text(encoding="utf-8"))
@@ -201,6 +209,8 @@ def main():
                 previous_attempts = result.get("previous_attempts", []) + [
                     {key: value for key, value in result.items() if key != "previous_attempts"}
                 ]
+            if model != "ocr-baseline":
+                time.sleep(args.pause_seconds)
             started = time.monotonic()
             try:
                 # The source image and shared prompt are the only inputs.
@@ -216,6 +226,7 @@ def main():
                 }
             result.update({"sha256": row["sha256"], "prompt_version": vision.PROMPT_VERSION})
             result["model_digest"] = model_digest
+            result["idle_pause_seconds"] = args.pause_seconds if model != "ocr-baseline" else 0
             if previous_attempts:
                 result["previous_attempts"] = previous_attempts
             result_file.write_text(json.dumps(result, indent=2), encoding="utf-8")
@@ -289,6 +300,7 @@ def summarize(manifest, model_dir, model, count):
             "error": result.get("error"),
             "model_digest": result.get("model_digest"),
             "previous_attempts": len(result.get("previous_attempts", [])),
+            "idle_pause_seconds": result.get("idle_pause_seconds", 0),
         }
         # Failed/malformed/timed-out responses count as failures, never omitted.
         reading = result.get("reading") or {}

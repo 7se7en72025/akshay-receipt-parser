@@ -9,6 +9,7 @@ import sys
 import tempfile
 import time
 from contextlib import ExitStack
+from pathlib import Path
 
 import httpx
 from benchmark_invoices import CACHE, ROOT
@@ -28,7 +29,14 @@ def main():
         "foreign_approval_blocked": 0,
         "currency_relabelling_blocked": 0,
     }
-    with tempfile.TemporaryDirectory(prefix="akshay-api-evaluation-") as temporary:
+    temporary_root = Path(tempfile.gettempdir()).resolve()
+    with tempfile.TemporaryDirectory(
+        prefix="akshay-api-evaluation-", dir=temporary_root
+    ) as temporary:
+        if Path(temporary).resolve().parent != temporary_root:
+            raise RuntimeError(
+                "Refusing evaluation cleanup outside the expected temporary directory."
+            )
         environment = {**os.environ, "AKSHAY_DATA_DIR": temporary, "AKSHAY_OLLAMA_MODEL": ""}
         with (CACHE / "api-server.log").open("w", encoding="utf-8") as log:
             process = subprocess.Popen(

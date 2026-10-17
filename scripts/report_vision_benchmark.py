@@ -58,6 +58,7 @@ def main():
             "Some labels are absent from the image. Printed-field scoring requires abstention for these fields.",
             "Full-label scoring also includes hidden metadata; hidden values must not be invented to improve it.",
             "Each failed response counts as zero correct fields, not a skipped document.",
+            "Ambiguous numerical dates are deliberately left unnormalized for manual review; their verbatim readings are retained.",
             "AI suggestions never automatically alter, approve or export a bill.",
         ],
     }
@@ -109,6 +110,8 @@ balancing, rounding tolerances or changing reference answers.
 Full-label agreement is also retained in the JSON report. It is not the primary
 accuracy measure because some metadata, including event-ticket subtotals and
 unit rates, is absent from the rendered image. A model must not guess it.
+Date mismatches include deliberate abstention for ambiguous numerical dates;
+the verbatim date remains available in the read-only page reading for review.
 
 ## Original regression and workflow integrity
 
@@ -141,6 +144,9 @@ Hardware: 16 GB RAM, NVIDIA RTX 3050 Laptop GPU with 4 GB VRAM. Official portabl
 Ollama v0.40.5. Models are local Apache-2.0 releases; one model is loaded at a time.
 Final prompt: `{vision.PROMPT_VERSION}`; image longest edge {vision.IMAGE_EDGE}px;
 options: `{json.dumps(vision.MODEL_OPTIONS, sort_keys=True)}`.
+Reported latency excludes downloads and idle pauses. Sustained laptop GPU heat
+reduced clock speeds during testing; later requests used cooldown pauses. These
+timings are indicative observations, not a controlled hardware speed comparison.
 
 The new set was used for debugging. These results are a regression/evaluation
 measure, not unseen production accuracy. Blurry photos, handwriting, unusual
