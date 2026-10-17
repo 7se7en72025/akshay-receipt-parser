@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import { api, message } from "./api";
 import { Loading } from "./components";
+import { useUnsavedChanges } from "./useUnsavedChanges";
 import type {
   Notify,
   Template,
@@ -22,11 +23,13 @@ export function Templates({
   fields,
   notify,
   onRefresh,
+  onDirty,
 }: {
   templates: Template[];
   fields: Record<string, string>;
   notify: Notify;
   onRefresh: () => Promise<void>;
+  onDirty: (dirty: boolean) => void;
 }) {
   const [selected, setSelected] = useState("");
   const [inspection, setInspection] = useState<TemplateInspection | null>(null);
@@ -34,6 +37,14 @@ export function Templates({
   const [loading, setLoading] = useState(false);
   const [busy, setBusy] = useState("");
   const [saved, setSaved] = useState(false);
+  const [baseline, setBaseline] = useState("");
+  const dirty = !!config && JSON.stringify(config) !== baseline;
+  useUnsavedChanges(dirty, onDirty);
+  const stale =
+    !!config &&
+    !!inspection &&
+    (config.sheet_name !== inspection.sheet_name ||
+      config.header_row !== inspection.header_row);
   const input = useRef<HTMLInputElement>(null);
   useEffect(() => {
     if (!selected && templates.length) setSelected(templates[0].id);
@@ -42,6 +53,8 @@ export function Templates({
     if (!selected) return;
     let canceled = false;
     setLoading(true);
+    setInspection(null);
+    setConfig(null);
     const existing = templates.find(
       (template) => template.id === selected,
     )?.config;
@@ -55,17 +68,21 @@ export function Templates({
       .then((result) => {
         if (canceled) return;
         setInspection(result);
-        setConfig({
+        const next = {
           sheet_name: result.sheet_name,
           header_row: result.header_row,
           start_row: existing?.start_row || result.suggested_start_row,
           mapping: existing?.mapping || result.suggested_mapping,
-        });
+        };
+        setConfig(next);
+        setBaseline(JSON.stringify(next));
         setSaved(
           !!existing?.mapping && Object.keys(existing.mapping).length > 0,
         );
       })
-      .catch((error) => notify(message(error), true))
+      .catch((error) => {
+        if (!canceled) notify(message(error), true);
+      })
       .finally(() => {
         if (!canceled) setLoading(false);
       });
@@ -76,6 +93,22 @@ export function Templates({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selected]);
   async function upload(file: File) {
+    if (
+      dirty &&
+      !window.confirm(
+        "Discard the unsaved mapping and attach another template?",
+      )
+    )
+      return;
+    if (
+      !file.size ||
+      file.size > 15 * 1024 * 1024 ||
+      !file.name.toLowerCase().endsWith(".xlsx")
+    ) {
+      notify("Choose a non-empty .xlsx workbook up to 15 MB.", true);
+      if (input.current) input.current.value = "";
+      return;
+    }
     setBusy("upload");
     const form = new FormData();
     form.append("file", file);
@@ -109,7 +142,14 @@ export function Templates({
           config.header_row,
       );
       setInspection(result);
-      setConfig({ ...config, mapping: result.suggested_mapping });
+      setConfig({
+        ...config,
+        mapping: result.suggested_mapping,
+        start_row:
+          config.sheet_name !== inspection?.sheet_name
+            ? result.suggested_start_row
+            : Math.max(config.start_row, config.header_row + 1),
+      });
       setSaved(false);
     } catch (error) {
       notify(message(error), true);
@@ -118,6 +158,13 @@ export function Templates({
     }
   }
   async function save() {
+    if (!config || stale) {
+      notify(
+        "Read headings for the selected worksheet and header row first.",
+        true,
+      );
+      return;
+    }
     setBusy("save");
     try {
       await api("/templates/" + selected, {
@@ -126,6 +173,7 @@ export function Templates({
       });
       await onRefresh();
       setSaved(true);
+      setBaseline(JSON.stringify(config));
       notify("Column mapping saved. This template is available during export.");
     } catch (error) {
       notify(message(error), true);
@@ -201,7 +249,15 @@ export function Templates({
                   "panel template-card " +
                   (selected === template.id ? "selected" : "")
                 }
-                onClick={() => setSelected(template.id)}
+                disabled={!!busy || loading}
+                onClick={() => {
+                  if (template.id === selected) return;
+                  if (
+                    !dirty ||
+                    window.confirm("Discard the unsaved column mapping?")
+                  )
+                    setSelected(template.id);
+                }}
               >
                 <span className="file-icon excel">
                   <FileSpreadsheet size={23} />
@@ -232,7 +288,7 @@ export function Templates({
             {loading ? (
               <Loading label="Reading workbook headings…" />
             ) : config && inspection ? (
-              <>
+              <fieldset className="template-controls" disabled={!!busy}>
                 <div className="panel-heading">
                   <div>
                     <FileSpreadsheet size={17} />
@@ -306,6 +362,12 @@ export function Templates({
                   Map each Excel column to an invoice field. Leave unused
                   columns unmapped. Confirm the insertion row is empty.
                 </p>
+                {stale && (
+                  <p className="info-note">
+                    Worksheet or header row changed. Select Read headings before
+                    mapping or saving.
+                  </p>
+                )}
                 <div className="table-wrap">
                   <table className="mapping-table">
                     <thead>
@@ -336,6 +398,7 @@ export function Templates({
                               <select
                                 aria-label={"Map column " + column.letter}
                                 value={current}
+                                disabled={stale}
                                 onChange={(event) => {
                                   const mapping = { ...config.mapping };
                                   Object.keys(mapping).forEach((key) => {
@@ -372,10 +435,13 @@ export function Templates({
                 <div className="template-save">
                   <span>
                     {Object.keys(config.mapping).length} field(s) mapped
+                    {dirty ? " · Unsaved changes" : ""}
                   </span>
                   <button
                     className="button primary"
-                    disabled={!!busy || !Object.keys(config.mapping).length}
+                    disabled={
+                      !!busy || stale || !Object.keys(config.mapping).length
+                    }
                     onClick={() => void save()}
                   >
                     {busy === "save" ? (
@@ -386,7 +452,7 @@ export function Templates({
                     Save mapping
                   </button>
                 </div>
-              </>
+              </fieldset>
             ) : (
               <div className="empty">
                 <h3>Select a template</h3>

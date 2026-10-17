@@ -20,7 +20,9 @@ import {
   ZoomIn,
   ZoomOut,
 } from "lucide-react";
-import { api, day, message, money } from "./api";
+import { api, day, message, moment, money } from "./api";
+import { History } from "./History";
+import { useUnsavedChanges } from "./useUnsavedChanges";
 import { Status } from "./components";
 import {
   emptyItem,
@@ -67,6 +69,7 @@ export function Review({
   onBack,
   onChange,
   onExport,
+  onDirty,
 }: {
   document: Document;
   health: Health | null;
@@ -74,6 +77,7 @@ export function Review({
   onBack: () => void;
   onChange: (doc: Document) => void;
   onExport: () => void;
+  onDirty: (dirty: boolean) => void;
 }) {
   const [invoice, setInvoice] = useState<Invoice>(structuredClone(doc.invoice));
   const [dirty, setDirty] = useState(false);
@@ -84,6 +88,28 @@ export function Review({
   const [busy, setBusy] = useState("");
   const [acknowledged, setAcknowledged] = useState(false);
   const [reviewNote, setReviewNote] = useState("");
+  const [historyId, setHistoryId] = useState<string | null>(null);
+  const [focusRow, setFocusRow] = useState<number | null>(null);
+  useUnsavedChanges(dirty, onDirty);
+  useEffect(() => {
+    if (tab !== "items" || focusRow === null) return;
+    const row = window.document.getElementById("product-row-" + focusRow);
+    row?.scrollIntoView({ block: "center" });
+    row
+      ?.querySelector<HTMLInputElement>("input")
+      ?.focus({ preventScroll: true });
+    setFocusRow(null);
+  }, [tab, focusRow]);
+  useEffect(() => {
+    const shortcut = (event: KeyboardEvent) => {
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "s") {
+        event.preventDefault();
+        if (dirty && !busy && !approved && !processing) void save();
+      }
+    };
+    window.addEventListener("keydown", shortcut);
+    return () => window.removeEventListener("keydown", shortcut);
+  });
   const approved = doc.status === "approved";
   const processing = doc.status === "queued" || doc.status === "processing";
   useEffect(() => {
@@ -179,13 +205,7 @@ export function Review({
   }
   return (
     <section className="page review-page">
-      <button
-        className="back-link"
-        onClick={() => {
-          if (!dirty || window.confirm("Leave without saving your changes?"))
-            onBack();
-        }}
-      >
+      <button className="back-link" onClick={onBack}>
         <ArrowLeft size={15} />
         All invoices
       </button>
@@ -208,6 +228,32 @@ export function Review({
           </p>
         </div>
         <div className="button-row">
+          {!processing && (
+            <button
+              className="button secondary"
+              disabled={!!busy}
+              onClick={async () => {
+                if (
+                  dirty &&
+                  !window.confirm(
+                    "Reload the saved record and discard unsaved edits?",
+                  )
+                )
+                  return;
+                setBusy("reload");
+                try {
+                  onChange(await api<Document>("/documents/" + doc.id));
+                } catch (error) {
+                  notify(message(error), true);
+                } finally {
+                  setBusy("");
+                }
+              }}
+            >
+              <RotateCcw size={15} />
+              Reload saved
+            </button>
+          )}
           {approved ? (
             <>
               <button
@@ -515,6 +561,7 @@ export function Review({
                 {invoice.items.map((item, index) => (
                   <fieldset
                     key={index}
+                    id={"product-row-" + index}
                     disabled={approved || processing || !!busy}
                     className="item-card"
                   >
@@ -648,6 +695,7 @@ export function Review({
                 {!approved && !processing && (
                   <button
                     className="button secondary full-width"
+                    disabled={!!busy || invoice.items.length >= 1500}
                     onClick={() => {
                       setInvoice((current) => ({
                         ...current,
@@ -703,7 +751,10 @@ export function Review({
                       {issue.row !== null && (
                         <button
                           className="text-button"
-                          onClick={() => setTab("items")}
+                          onClick={() => {
+                            setTab("items");
+                            setFocusRow(issue.row);
+                          }}
                         >
                           Review item {issue.row + 1}
                         </button>
@@ -752,7 +803,10 @@ export function Review({
                   {doc.history?.map((event) => (
                     <div key={event.id}>
                       <Clock3 size={13} />
-                      <span>
+                      <button
+                        className="text-button"
+                        onClick={() => setHistoryId(event.id)}
+                      >
                         {(
                           {
                             uploaded: "Original uploaded",
@@ -761,10 +815,11 @@ export function Review({
                             approved: "Bill approved",
                             exported: "Excel exported",
                             requeued: "Re-extraction requested",
+                            restored: "Saved version restored",
                           } as Record<string, string>
                         )[event.action] || event.action}
-                      </span>
-                      <time>{day(event.created_at)}</time>
+                      </button>
+                      <time>{moment(event.created_at)}</time>
                     </div>
                   ))}
                 </div>
@@ -819,6 +874,16 @@ export function Review({
             View checks <ChevronRight size={14} />
           </button>
         </div>
+      )}
+      {historyId && (
+        <History
+          doc={doc}
+          eventId={historyId}
+          onClose={() => setHistoryId(null)}
+          notify={notify}
+          onRestore={onChange}
+          dirty={dirty}
+        />
       )}
     </section>
   );

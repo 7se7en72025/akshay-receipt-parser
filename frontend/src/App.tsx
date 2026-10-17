@@ -36,6 +36,8 @@ export default function App() {
   const [exports, setExports] = useState<ExportRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [connectionError, setConnectionError] = useState("");
+  const [activeError, setActiveError] = useState("");
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [useAi, setUseAi] = useState(false);
   const [activeId, setActiveId] = useState<string | null>(null);
@@ -108,6 +110,7 @@ export default function App() {
   }, [toast]);
   useEffect(() => {
     setActive(null);
+    setActiveError("");
     if (!activeId) return;
     let canceled = false;
     void api<Document>("/documents/" + activeId)
@@ -115,7 +118,7 @@ export default function App() {
         if (!canceled) setActive(doc);
       })
       .catch((error) => {
-        if (!canceled) notify(message(error), true);
+        if (!canceled) setActiveError(message(error));
       });
     return () => {
       canceled = true;
@@ -124,6 +127,19 @@ export default function App() {
 
   async function upload(files: FileList | File[]) {
     if (!files.length || uploading) return;
+    const batch = Array.from(files);
+    if (
+      batch.length > 12 ||
+      batch.some((file) => file.size > 15 * 1024 * 1024 || file.size === 0) ||
+      batch.reduce((sum, file) => sum + file.size, 0) > 60 * 1024 * 1024
+    ) {
+      notify(
+        "Choose 1–12 non-empty files, up to 15 MB each and 60 MB in total.",
+        true,
+      );
+      if (input.current) input.current.value = "";
+      return;
+    }
     setUploading(true);
     const form = new FormData();
     Array.from(files).forEach((file) => form.append("files", file));
@@ -188,6 +204,12 @@ export default function App() {
     );
   });
   function nav(next: View) {
+    if (
+      hasUnsavedChanges &&
+      !window.confirm("Leave without saving your changes?")
+    )
+      return;
+    setHasUnsavedChanges(false);
     setView(next);
     setActiveId(null);
   }
@@ -292,13 +314,27 @@ export default function App() {
                 document={active}
                 health={health}
                 notify={notify}
-                onBack={() => setActiveId(null)}
+                onDirty={setHasUnsavedChanges}
+                onBack={() => nav("invoices")}
                 onChange={(doc) => {
                   setActive(doc);
                   void refresh();
                 }}
                 onExport={() => openExport([active.id])}
               />
+            ) : activeError ? (
+              <div className="page">
+                <div className="panel empty" role="alert">
+                  <h3>Could not open this bill</h3>
+                  <p>{activeError}</p>
+                  <button
+                    className="button secondary"
+                    onClick={() => nav("invoices")}
+                  >
+                    Back to invoices
+                  </button>
+                </div>
+              </div>
             ) : (
               <Loading label="Opening bill…" />
             )
@@ -307,6 +343,7 @@ export default function App() {
               templates={templates}
               fields={health?.export_fields || {}}
               notify={notify}
+              onDirty={setHasUnsavedChanges}
               onRefresh={refreshTemplates}
             />
           ) : view === "exports" ? (

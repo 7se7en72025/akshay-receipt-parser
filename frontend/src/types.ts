@@ -70,6 +70,13 @@ export interface Health {
   limits: { file_mb: number; batch_files: number; pages: number };
   export_fields: Record<string, string>;
 }
+export interface HistoryRecord {
+  id: string;
+  action: string;
+  created_at: string;
+  invoice: Invoice | null;
+  detail: { review_note?: string; method?: string; restored_from?: string };
+}
 export interface TemplateConfig {
   sheet_name: string;
   header_row: number;

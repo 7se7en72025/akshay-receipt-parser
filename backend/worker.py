@@ -1,6 +1,7 @@
 import json
 import logging
 import multiprocessing
+import sqlite3
 import threading
 import time
 
@@ -50,7 +51,12 @@ def process_document(document_id):
                 db,
                 document_id,
                 "extracted",
-                {"method": result["method"], "items": len(result["invoice"].items)},
+                {
+                    "method": result["method"],
+                    "items": len(result["invoice"].items),
+                    "invoice": result["invoice"].model_dump(mode="json"),
+                    "previous": document["invoice"],
+                },
             )
     except Exception as error:
         logger.exception("Document processing failed: %s", document_id)
@@ -70,16 +76,21 @@ def process_document(document_id):
 def supervise():
     context = multiprocessing.get_context("spawn")
     while not STOP.is_set():
-        with store.connection() as db:
-            db.execute("BEGIN IMMEDIATE")
-            row = db.execute(
-                "SELECT id FROM documents WHERE status='queued' ORDER BY created_at LIMIT 1"
-            ).fetchone()
-            if row:
-                db.execute(
-                    "UPDATE documents SET status='processing',attempts=attempts+1,updated_at=? WHERE id=?",
-                    (store.now(), row["id"]),
-                )
+        try:
+            with store.connection() as db:
+                db.execute("BEGIN IMMEDIATE")
+                row = db.execute(
+                    "SELECT id FROM documents WHERE status='queued' ORDER BY created_at LIMIT 1"
+                ).fetchone()
+                if row:
+                    db.execute(
+                        "UPDATE documents SET status='processing',attempts=attempts+1,updated_at=? WHERE id=?",
+                        (store.now(), row["id"]),
+                    )
+        except sqlite3.Error:
+            logger.exception("Could not read the processing queue; retrying shortly")
+            STOP.wait(2)
+            continue
         if row is None:
             STOP.wait(0.6)
             continue
@@ -101,8 +112,8 @@ def supervise():
                 )
                 with store.connection() as db:
                     db.execute(
-                        "UPDATE documents SET status='failed',error=?,updated_at=? WHERE id=?",
-                        (reason, store.now(), row["id"]),
+                        "UPDATE documents SET status=?,error=?,version=version+1,updated_at=? WHERE id=?",
+                        ("queued" if STOP.is_set() else "failed", reason, store.now(), row["id"]),
                     )
             elif process.exitcode != 0:
                 with store.connection() as db:

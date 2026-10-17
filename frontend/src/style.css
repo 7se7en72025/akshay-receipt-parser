@@ -1916,6 +1916,61 @@ select {
     gap: 12px;
   }
 }
+.template-controls {
+  border: 0;
+  padding: 0;
+  margin: 0;
+  min-width: 0;
+}
+.snapshot-details {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  margin: 20px 0;
+}
+.snapshot-details dt {
+  color: #52605a;
+  font-size: 12px;
+  margin-bottom: 5px;
+}
+.snapshot-details dd {
+  margin: 0;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+.history-body {
+  max-height: 65vh;
+  overflow: auto;
+}
+.history-body .table-wrap {
+  max-height: 280px;
+  overflow: auto;
+}
+.activity-list .text-button {
+  text-align: left;
+  white-space: normal;
+}
+.activity-list time {
+  white-space: nowrap;
+}
+button:focus-visible,
+a:focus-visible,
+summary:focus-visible {
+  outline: 2px solid #236951;
+  outline-offset: 3px;
+}
+@media (max-width: 560px) {
+  .snapshot-details {
+    grid-template-columns: 1fr;
+  }
+  .activity-list > div {
+    flex-wrap: wrap;
+  }
+  .activity-list time {
+    margin-left: 24px;
+    font-size: 11px;
+  }
+}
 @media (prefers-reduced-motion: reduce) {
   * {
     animation-duration: 0.01ms !important;

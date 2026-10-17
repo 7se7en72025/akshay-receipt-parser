@@ -245,7 +245,45 @@ def get_document(document_id: str):
     return document
 
 
-def save_document(document_id, payload, approve=False):
+def history_or_404(document_id, event_id):
+    document_or_404(document_id)
+    with store.connection() as db:
+        row = db.execute(
+            "SELECT * FROM review_events WHERE id=? AND document_id=?",
+            (event_id, document_id),
+        ).fetchone()
+    if not row:
+        raise HTTPException(404, "History entry not found.")
+    detail = json.loads(row["detail"])
+    snapshot = detail.get("invoice") or detail.get("previous")
+    return {**dict(row), "detail": detail, "invoice": snapshot}
+
+
+@app.get("/api/documents/{document_id}/history/{event_id}")
+def history(document_id: str, event_id: str):
+    return history_or_404(document_id, event_id)
+
+
+class RestoreRequest(BaseModel):
+    version: int
+
+
+@app.post("/api/documents/{document_id}/history/{event_id}/restore")
+def restore(document_id: str, event_id: str, payload: RestoreRequest):
+    record = history_or_404(document_id, event_id)
+    if not record["invoice"]:
+        raise HTTPException(422, "This activity has no saved invoice snapshot.")
+    invoice = Invoice.model_validate(record["invoice"])
+    # Restoring creates a new unapproved draft; it never rewrites the audit trail.
+    return save_document(
+        document_id,
+        SaveRequest(invoice=invoice, version=payload.version),
+        action="restored",
+        restore_event_id=event_id,
+    )
+
+
+def save_document(document_id, payload, approve=False, action=None, restore_event_id=None):
     document = document_or_404(document_id)
     if document["status"] in {"queued", "processing"}:
         raise HTTPException(409, "Wait for processing to finish before editing.")
@@ -279,11 +317,12 @@ def save_document(document_id, payload, approve=False):
         store.event(
             db,
             document_id,
-            "approved" if approve else "saved",
+            action or ("approved" if approve else "saved"),
             {
                 "previous": json.loads(current["invoice_json"]),
                 "invoice": payload.invoice.model_dump(mode="json"),
                 "review_note": payload.review_note if approve else "",
+                "restored_from": restore_event_id,
             },
         )
     return get_document(document_id)
