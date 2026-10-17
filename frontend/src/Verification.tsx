@@ -353,7 +353,7 @@ export function Verification({
                     {entry.reading.currency || "Currency unclear"}
                   </p>
                   <p>
-                    Printed date:{" "}
+                    AI date reading:{" "}
                     {entry.printed_date ||
                       entry.reading.bill_date ||
                       "Not readable"}

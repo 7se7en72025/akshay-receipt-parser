@@ -58,7 +58,7 @@ def main():
             "Some labels are absent from the image. Printed-field scoring requires abstention for these fields.",
             "Full-label scoring also includes hidden metadata; hidden values must not be invented to improve it.",
             "Each failed response counts as zero correct fields, not a skipped document.",
-            "Ambiguous numerical dates are deliberately left unnormalized for manual review; their verbatim readings are retained.",
+            "Ambiguous numerical dates are deliberately left unnormalized for manual review; their raw model readings are retained.",
             "AI suggestions never automatically alter, approve or export a bill.",
         ],
     }
@@ -111,7 +111,7 @@ Full-label agreement is also retained in the JSON report. It is not the primary
 accuracy measure because some metadata, including event-ticket subtotals and
 unit rates, is absent from the rendered image. A model must not guess it.
 Date mismatches include deliberate abstention for ambiguous numerical dates;
-the verbatim date remains available in the read-only page reading for review.
+the raw model date reading remains available in the read-only page reading for review.
 
 ## Original regression and workflow integrity
 

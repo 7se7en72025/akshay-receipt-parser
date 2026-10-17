@@ -355,6 +355,12 @@ def summarize(manifest, model_dir, model, count):
         ),
         "results": results,
     }
+    if model == "ocr-baseline":
+        summary["protocol"] = {
+            "reader": "backend.extraction OCR path",
+            "ocr_image_bounds": [2400, 3200],
+            "description": "Application OCR preprocessing on original images; no vision model or vision context is used.",
+        }
     (model_dir / "summary.json").write_text(json.dumps(summary, indent=2), encoding="utf-8")
     print(
         json.dumps({key: value for key, value in summary.items() if key != "results"}, indent=2),
