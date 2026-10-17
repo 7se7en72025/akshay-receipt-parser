@@ -1,17 +1,140 @@
 # Akshay invoice workspace
 
-Local-first supplier invoice extraction, staff review and Excel export.
+A local web application for supplier bill extraction, human review and Excel export.
 
-## Scope
+**Workflow:** upload PDF/JPG/PNG files → direct extraction or local OCR → editable draft → validation → staff approval → new Excel workbook.
 
-PDF/JPG/PNG upload → text extraction or local OCR → column mapping → validation → editable review → approval → Excel export. Optional local Ollama assistance can propose structured data for unfamiliar layouts. Financial approval always remains a human action.
+## Run on Windows
 
-This repository is independent of SSMS. The first release is a single-operator local workspace; POS integration, stock updates, shared authentication and production hosting are later work.
+Requirements: Python 3.11+ and Bun. No paid server or AI API key is required.
 
-## Development
+From the repository root:
 
-Python 3.11+ and Bun/Node are required. Setup and feature instructions are added with their implementation commits. Uploaded bills, local databases, model files and generated workbooks are excluded from Git.
+~~~powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\start.ps1 -Setup
+~~~
 
-## Data
+Open **http://127.0.0.1:8001**. On later runs, omit -Setup. Keep the server process running while working.
 
-The supplied Akshay purchase bill informs the first parser profile. It is not committed. Other layouts can require corrected mappings or manual review; extraction is not guaranteed to be perfect.
+The setup command creates a repository-local Python environment, installs the locked dependencies, installs frontend dependencies and builds the interface. It does not change the machine's persistent PowerShell execution policy.
+
+Manual setup:
+
+~~~powershell
+python -m venv .venv
+.\.venv\Scripts\python.exe -m pip install -r requirements.lock
+cd frontend
+bun install --frozen-lockfile
+bun run build
+cd ..
+.\.venv\Scripts\python.exe -m uvicorn backend.main:app --host 127.0.0.1 --port 8001
+~~~
+
+For frontend development, run the backend as above and run bun run dev from frontend in a second terminal. The frontend on port 5174 proxies /api to port 8001.
+
+## Features
+
+- Batch upload: up to 12 PDF/JPG/PNG files, 15 MB per file and 60 MB per batch.
+- Up to 25 pages per PDF; a single processing job has a four-minute deadline.
+- Direct table extraction using pdfplumber, with header-based mapping and parent/child tax headings.
+- Local RapidOCR for images and scans, using ONNX Runtime on CPU.
+- Optional loopback Ollama assistance for proposing structured invoice data.
+- Original document preview, source text, editable item rows, saved drafts and review history.
+- Decimal arithmetic, missing-field checks and reconciliation of item amounts and bill totals.
+- Duplicate file detection and same-supplier/bill/financial-year warnings.
+- Approval requires resolving errors and explicitly acknowledging remaining warnings.
+- Standard Excel export with Line Items and Bill Summary sheets.
+- Upload .xlsx templates, choose worksheet/headings/insertion row and map output columns.
+- Template exports refuse occupied or merged destination cells instead of overwriting them.
+- Export history records document versions and the template configuration used.
+
+## Using the workspace
+
+1. Upload one bill or a small batch.
+2. Open its review draft. Compare every entry with the original.
+3. Correct supplier details, bill details, product rows and printed totals.
+4. Save the draft to refresh validation.
+5. Open Checks & history, resolve errors and review warnings.
+6. Approve the bill. Approval here confirms the extracted invoice data; it does not confirm receipt of stock or initiate a payment.
+7. Select approved bills and create a workbook. Choose the standard workbook or a saved template.
+
+Editing an approved record reopens the draft. It must be approved again before another export.
+
+## Existing Excel template
+
+Use Excel templates → Attach .xlsx template. The app suggests a heading row based on recognised field names; confirm it.
+
+Choose the worksheet and heading row, then select Read headings. Map the columns and confirm an empty insertion row. Save the mapping before exporting. The original workbook is preserved.
+
+Only agreed .xlsx layouts are supported. Existing formulas are retained where possible but not calculated by openpyxl. Shapes, macros, advanced charts and every Excel feature are not guaranteed to round-trip. Formula cells and existing mapped data are not overwritten. Export is capped at 10,000 product rows.
+
+## Optional local AI
+
+The standard PDF/OCR path does not require a general AI model. To enable assisted extraction:
+
+1. Install and run Ollama separately.
+2. Install a model appropriate for the computer's available memory.
+3. Copy .env.example to .env and set AKSHAY_OLLAMA_MODEL to its exact installed model name.
+4. Restart the backend.
+
+The model endpoint must be loopback-only. The app sends extracted text, not image files, to this optional text model. Scans go through OCR first. It requests an Invoice-shaped JSON response and validates it before replacing the draft. If assistance fails, the direct/OCR draft is retained.
+
+A valid schema does not prove the values are correct. AI proposals require the same staff review. Models are not downloaded automatically by this application.
+
+## Supported formats and limitations
+
+The first parser targets clearly labelled purchase/invoice tables, including the supplied store-generated purchase-bill layout. Quantity, rate, taxable amounts and tax subcolumns are mapped by headings rather than a fixed column order.
+
+A new supplier layout, unfamiliar labels, merged cells, damaged pages or a blurry photo can need correction. OCR column reconstruction is approximate. Unsupported documents remain review drafts; use manual rows or configured AI assistance.
+
+Both printed discount columns are preserved without assuming whether each represents an amount or percentage. Staff must confirm their meaning.
+
+Initial OCR models support their bundled languages; this is not a promise of reliable recognition for every language or handwritten bill. Initial model preparation may need network access depending on the selected RapidOCR configuration.
+
+## Local data and access
+
+This version is a **single-operator local workspace**, bound to 127.0.0.1. It has no staff accounts or shared authentication. Do not use it as a public or LAN deployment.
+
+SQLite and uploaded/generated files live under data/ by default:
+
+- workspace.sqlite3: document records, draft versions and review events.
+- uploads/: immutable original bills.
+- previews/: rendered page images.
+- templates/: original uploaded workbooks.
+- exports/: generated workbooks.
+
+These folders, .env, the virtual environment and model files are excluded from Git. The supplied real bill is not committed. To change the data directory, set AKSHAY_DATA_DIR in .env.
+
+Stop the backend before copying the complete data directory for a consistent local backup. Shared deployment, authentication, a production database migration plan, retention rules and managed backups are separate work.
+
+## Import from the command line
+
+With the local backend running:
+
+~~~powershell
+.\.venv\Scripts\python.exe -m backend.import_bill "C:\bills\supplier.pdf"
+~~~
+
+This submits the document through the same upload API. It does not approve or export it.
+
+## Code layout
+
+- backend/extraction.py: direct extraction, OCR and column mapping.
+- backend/validation.py: required fields and Decimal reconciliation.
+- backend/ai.py: optional local-model adapter.
+- backend/worker.py: queued processing and interruption recovery.
+- backend/main.py: local API, review/approval and file routes.
+- backend/workbooks.py: template inspection and safe Excel export.
+- backend/database.py: local SQLite schema and audit events.
+- frontend/src/: React/TypeScript inbox, review, templates and history.
+
+## Development checks
+
+~~~powershell
+.\.venv\Scripts\ruff.exe check backend
+.\.venv\Scripts\python.exe -m compileall -q backend
+cd frontend
+bun run build
+~~~
+
+No test suite has been added or run. Real invoice formats still require operator review. POS integration, live inventory, student shopping and historical POS database migration are not part of this invoice MVP.
