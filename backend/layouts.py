@@ -78,6 +78,15 @@ def generic_fields(text):
     source = "\n".join(lines)
     us = bool(re.search(r"\b[A-Z]{2} \d{5}\b|\bEIN\s*:|Sales Tax", source))
     header = re.split(r"\bBILL TO\b|\bDescription\b", source, maxsplit=1, flags=re.I)[0]
+    heading_names = {
+        "",
+        "date",
+        "invoice",
+        "taxinvoice",
+        "statement",
+        "ordersummary",
+        "orderconfirmation",
+    }
     if lines:
         first_line = re.split(r"\s{2,}", lines[0])[0]
         candidate = re.sub(r"\b(?:TAX\s+)?INVOICE\b.*$", "", first_line, flags=re.I).strip()
@@ -85,7 +94,11 @@ def generic_fields(text):
             candidate = re.sub(r"^(?:TAX\s+)?INVOICE\s*", "", lines[0], flags=re.I).strip()
         if not candidate and len(lines) > 1:
             candidate = lines[1]
-        if candidate and not re.search(r"Invoice\s*(?:No|Number|#)|^Date\s*:", candidate, re.I):
+        if (
+            candidate
+            and re.sub(r"\W", "", candidate).casefold() not in heading_names
+            and not re.search(r"Invoice\s*(?:No|Number|#)|^Date\s*:", candidate, re.I)
+        ):
             if len(lines) > 1 and re.fullmatch(
                 r"(?:Ltd\.?|Limited|LLC|Inc\.?|GmbH|PLC)", lines[1], re.I
             ):
@@ -97,7 +110,13 @@ def generic_fields(text):
     if seller_statement:
         data["supplier_name"] = seller_statement[1].strip()
     payee = re.search(r"Make\s+checks\s+payable\s+to\s*:\s*([^\n]+)", source, re.I)
-    if payee:
+    generic_name = re.sub(r"\W", "", data.get("supplier_name", "")).casefold()
+    if (
+        payee
+        and generic_name in heading_names
+        and re.sub(r"\s+", " ", payee[1].strip()).casefold()
+        in re.sub(r"\s+", " ", header).casefold()
+    ):
         data["supplier_name"] = payee[1].strip()
     identifier = re.search(
         r"(?<!Supplier )\b(?:Invoice|Document)[^\S\n]*(?:Number\b|No\b\.?|#)[^\S\n]*[:#.]?[^\S\n]*([A-Z0-9][A-Z0-9/._-]*)",
@@ -118,6 +137,14 @@ def generic_fields(text):
         candidates = set(re.findall(r"\bINV[-/][A-Z0-9._/-]*\d[A-Z0-9._/-]*\b", header, re.I))
         if len(candidates) == 1:
             data["bill_number"] = candidates.pop()
+    if not data.get("bill_number"):
+        separate_number = re.search(
+            r"\b(?:INVOICE|BILL|DOCUMENT)[ \t]*(?:NO\.?|NUMBER|#)[ \t]*[:.]?[ \t]*\n[ \t]*(\d+)[ \t]*(?=\n|$)",
+            header,
+            re.I,
+        )
+        if separate_number:
+            data["bill_number"] = separate_number[1]
     header_lines = header.splitlines()
     for index, line in enumerate(header_lines):
         if re.fullmatch(r"DATE", line.strip(), re.I) and index + 1 < len(header_lines):

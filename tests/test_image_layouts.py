@@ -7,6 +7,24 @@ from backend.models import number
 
 
 class ImageLayoutTests(unittest.TestCase):
+    def test_date_heading_and_unidentified_payee_are_not_a_supplier(self):
+        fields = generic_fields(
+            "DATE\n15/07/2023\nINVOICE NO.\nINV-1\nBILL TO\nCustomer\nMake checks payable to: Financing Agent Ltd"
+        )
+        self.assertFalse(fields.get("supplier_name"))
+
+    def test_payee_does_not_replace_an_identified_supplier(self):
+        fields = generic_fields(
+            "Actual Supplier Ltd\nInvoice Number: INV-100\nMake checks payable to: Financing Agent Ltd"
+        )
+        self.assertEqual(fields["supplier_name"], "Actual Supplier Ltd")
+
+    def test_numeric_bill_number_under_its_own_heading_is_preserved(self):
+        self.assertEqual(
+            generic_fields("Example Supplier\nBILL NO.\n12345\nDate: 15/07/2023")["bill_number"],
+            "12345",
+        )
+
     def test_order_rows_copy_printed_quantities_and_amounts_without_inferred_rates(self):
         items = inline_quantity_items(
             "Order Summary\nCustomer  2.0 x Standard ticket  $60.00\nCustomer  1.0 �VIP pass  $75.00\nCustomer  3.0 xMerch package  $90.00",
