@@ -87,6 +87,14 @@ export function History({
             {record.detail.review_note && (
               <div className="info-note">{record.detail.review_note}</div>
             )}
+            {record.detail.model && (
+              <p>
+                Local model: {record.detail.model}
+                {record.detail.selected
+                  ? ` · ${record.detail.selected.length} selected suggestions`
+                  : ""}
+              </p>
+            )}
             {invoice ? (
               <>
                 <dl className="snapshot-details">

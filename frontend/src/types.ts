@@ -128,7 +128,13 @@ export interface HistoryRecord {
   action: string;
   created_at: string;
   invoice: Invoice | null;
-  detail: { review_note?: string; method?: string; restored_from?: string };
+  detail: {
+    review_note?: string;
+    method?: string;
+    restored_from?: string;
+    model?: string;
+    selected?: string[];
+  };
 }
 export interface TemplateConfig {
   sheet_name: string;

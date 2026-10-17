@@ -76,7 +76,9 @@ export function Verification({
         setModel((current) =>
           (health.vision?.models || []).includes(current)
             ? current
-            : health.vision?.models[0] || "",
+            : (health.vision?.models || []).includes(health.vision?.model)
+              ? health.vision.model
+              : health.vision?.models[0] || "",
         );
         setJob(jobs[0] || null);
         setSelected([]);

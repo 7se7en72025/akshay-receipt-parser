@@ -908,6 +908,9 @@ export function Review({
                             exported: "Excel exported",
                             requeued: "Re-extraction requested",
                             restored: "Saved version restored",
+                            ai_verification_requested: "AI check requested",
+                            ai_verification_finished: "AI check finished",
+                            ai_suggestions_applied: "AI suggestions saved",
                           } as Record<string, string>
                         )[event.action] || event.action}
                       </button>
