@@ -53,6 +53,11 @@ def initialize():
           id TEXT PRIMARY KEY, storage_name TEXT NOT NULL,
           snapshot_json TEXT NOT NULL, created_at TEXT NOT NULL
         );
+        CREATE INDEX IF NOT EXISTS documents_queue ON documents(status, created_at);
+        CREATE INDEX IF NOT EXISTS documents_created ON documents(created_at DESC);
+        CREATE INDEX IF NOT EXISTS documents_bill_number
+          ON documents(lower(json_extract(invoice_json,'$.bill_number')));
+        CREATE INDEX IF NOT EXISTS events_document ON review_events(document_id, created_at DESC);
         PRAGMA user_version=1;
         """)
         # This is a single-process local workspace. Recover interrupted jobs on startup.
