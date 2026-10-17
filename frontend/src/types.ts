@@ -83,6 +83,12 @@ export interface Health {
   workspace: string;
   ocr_installed: boolean;
   ai: { configured: boolean; available: boolean; model: string };
+  vision: {
+    configured: boolean;
+    available: boolean;
+    model: string;
+    models: string[];
+  };
   limits: { file_mb: number; batch_files: number; pages: number };
   export_fields: Record<string, string>;
 }

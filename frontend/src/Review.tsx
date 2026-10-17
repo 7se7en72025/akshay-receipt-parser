@@ -22,6 +22,7 @@ import {
 } from "lucide-react";
 import { api, day, message, moment, money } from "./api";
 import { History } from "./History";
+import { Verification } from "./Verification";
 import { useUnsavedChanges } from "./useUnsavedChanges";
 import { Status } from "./components";
 import {
@@ -796,6 +797,13 @@ export function Review({
             )}
             {tab === "checks" && (
               <div className="checks-content">
+                <Verification
+                  doc={doc}
+                  dirty={dirty}
+                  notify={notify}
+                  onChange={onChange}
+                  onPage={setPage}
+                />
                 {dirty && (
                   <div className="info-note">
                     Checks reflect the last saved version. Save your changes to
@@ -937,6 +945,11 @@ export function Review({
               >
                 <Sparkles size={13} />
                 Local AI assist
+              </button>
+            )}
+            {!processing && (
+              <button className="text-button" onClick={() => setTab("checks")}>
+                <Sparkles size={13} /> Verify with AI
               </button>
             )}
           </div>
