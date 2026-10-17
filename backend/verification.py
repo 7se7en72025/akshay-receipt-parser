@@ -21,7 +21,13 @@ def present(row, current_version):
         return None
     job = dict(row)
     job["result"] = json.loads(job.pop("result_json"))
-    job.pop("snapshot_json", None)
+    snapshot = json.loads(job.pop("snapshot_json"))
+    if (
+        job["result"].get("pages")
+        and job["result"].get("normalization_version") != vision.NORMALIZATION_VERSION
+    ):
+        job["result"]["report"] = vision.compare(snapshot, job["result"]["pages"])
+        job["result"]["normalization_version"] = vision.NORMALIZATION_VERSION
     job["outdated"] = bool(
         job["result"].get("prompt_version")
         and job["result"]["prompt_version"] != vision.PROMPT_VERSION
@@ -109,6 +115,7 @@ def process_job(job_id):
             "report": vision.compare(snapshot, pages),
             "total_pages": document["page_count"],
             "prompt_version": vision.PROMPT_VERSION,
+            "normalization_version": vision.NORMALIZATION_VERSION,
         }
         with store.connection() as db:
             db.execute(

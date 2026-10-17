@@ -82,19 +82,30 @@ def reference(row, visible=False):
 
 
 def score(reading, expected):
-    from backend.vision import decimal, normalized
+    from backend.vision import decimal, normalize_reading, normalized
+
+    raw_reading = reading
+    reading = normalize_reading(reading)
 
     checks, mismatches = [], []
     visible_checks, abstention_checks = [], []
 
     def check(path, actual, wanted, numeric=False):
+        original = raw_reading
+        try:
+            for part in path.split("."):
+                original = original[int(part)] if isinstance(original, list) else original.get(part)
+        except (AttributeError, IndexError, TypeError, ValueError):
+            original = None
+        if path == "item_count":
+            original = actual
         equal = (
             decimal(str(actual)) == decimal(str(wanted))
             if numeric
             else normalized(actual) == normalized(wanted)
         )
         if wanted is None:
-            equal = actual is None or actual == ""
+            equal = original is None or original == ""
         checks.append(equal)
         (abstention_checks if wanted is None else visible_checks).append(equal)
         if not equal:
@@ -102,8 +113,11 @@ def score(reading, expected):
                 {
                     "field": path,
                     "actual": actual,
+                    "raw_actual": original,
                     "expected": wanted,
-                    "kind": "missing" if actual is None else "wrong",
+                    "kind": "unsupported_format"
+                    if actual is None and original not in (None, "")
+                    else ("missing" if actual is None else "wrong"),
                 }
             )
 
@@ -313,9 +327,12 @@ def summarize(manifest, model_dir, model, count):
             "model_digest": result.get("model_digest"),
             "previous_attempts": len(result.get("previous_attempts", [])),
             "idle_pause_seconds": result.get("idle_pause_seconds", 0),
+            "raw_date_reading": result.get("printed_date"),
         }
         # Failed/malformed/timed-out responses count as failures, never omitted.
-        reading = result.get("reading") or {}
+        reading = dict(result.get("raw_reading") or result.get("reading") or {})
+        if "bill_date" in reading:
+            reading["bill_date"] = (result.get("reading") or {}).get("bill_date")
         record["label_score"] = score(reading, reference(row))
         record["printed_score"] = score(reading, reference(row, visible=True))
         if result.get("error"):
@@ -328,6 +345,7 @@ def summarize(manifest, model_dir, model, count):
     printed = [result["printed_score"] for result in results]
     summary = {
         "protocol": {
+            "normalization_version": vision.NORMALIZATION_VERSION,
             "prompt_version": vision.PROMPT_VERSION,
             "prompt_sha256": hashlib.sha256(vision.PROMPT.encode()).hexdigest(),
             "image_edge": vision.IMAGE_EDGE,

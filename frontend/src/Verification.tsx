@@ -12,6 +12,12 @@ interface Check {
   status: "match" | "difference" | "unreadable";
   editable: boolean;
 }
+interface AiItem {
+  description: string | null;
+  quantity: string | null;
+  unit_price: string | null;
+  amount: string | null;
+}
 interface Job {
   id: string;
   model: string;
@@ -25,17 +31,13 @@ interface Job {
     pages?: {
       page: number;
       printed_date?: string | null;
+      raw_reading?: { items: AiItem[] };
       reading: {
         supplier_name: string | null;
         bill_number: string | null;
         bill_date: string | null;
         currency: string | null;
-        items: {
-          description: string | null;
-          quantity: string | null;
-          unit_price: string | null;
-          amount: string | null;
-        }[];
+        items: AiItem[];
       };
     }[];
     total_pages?: number;
@@ -372,18 +374,22 @@ export function Verification({
                         </tr>
                       </thead>
                       <tbody>
-                        {entry.reading.items.map((item, index) => (
-                          <tr key={index}>
-                            <td>{item.description || "Not readable"}</td>
-                            <td>
-                              {item.quantity ?? "Not printed / unreadable"}
-                            </td>
-                            <td>
-                              {item.unit_price ?? "Not printed / unreadable"}
-                            </td>
-                            <td>{item.amount ?? "Not printed / unreadable"}</td>
-                          </tr>
-                        ))}
+                        {(entry.raw_reading?.items || entry.reading.items).map(
+                          (item, index) => (
+                            <tr key={index}>
+                              <td>{item.description || "Not readable"}</td>
+                              <td>
+                                {item.quantity ?? "Not printed / unreadable"}
+                              </td>
+                              <td>
+                                {item.unit_price ?? "Not printed / unreadable"}
+                              </td>
+                              <td>
+                                {item.amount ?? "Not printed / unreadable"}
+                              </td>
+                            </tr>
+                          ),
+                        )}
                       </tbody>
                     </table>
                   </div>

@@ -57,6 +57,9 @@ An existing Ollama installation on port 11434 can also be used by changing the U
 Nothing is automatically overwritten. Applying suggestions requires the exact
 saved version used by the report. Any saved edit, restore, approval or
 re-extraction makes the old report stale. Previous draft values remain in history.
+Known currency symbols and numeric separators in model readings are normalized
+for comparison without calculating new amounts. The original model strings stay
+in the read-only page reading. Percentages are not treated as monetary amounts.
 
 ## Scope and failure handling
 

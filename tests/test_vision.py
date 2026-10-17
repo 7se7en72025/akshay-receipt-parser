@@ -50,6 +50,45 @@ def page(**overrides):
 
 
 class VisionComparisonTests(unittest.TestCase):
+    def test_reader_preserves_raw_strings_beside_normalized_amounts(self):
+        response = httpx.Response(
+            200,
+            json={"message": {"content": json.dumps(page(grand_total="$118.00")["reading"])}},
+            request=httpx.Request("POST", "http://localhost"),
+        )
+        with (
+            patch.object(vision, "VISION_MODELS", ("test",)),
+            patch.object(vision, "page_image", return_value="aW1hZ2U="),
+            patch.object(httpx.Client, "post", return_value=response),
+        ):
+            result = vision.read_page("unused", "image/png", 1, "test")
+        self.assertEqual(result["reading"]["grand_total"], "118.00")
+        self.assertEqual(result["raw_reading"]["grand_total"], "$118.00")
+        self.assertEqual(result["normalization_version"], vision.NORMALIZATION_VERSION)
+
+    def test_currency_formatting_does_not_change_the_numeric_value(self):
+        reading = page(grand_total="$1,200.50")["reading"]
+        reading["items"][0]["amount"] = "1.200,50 EUR"
+        original = copy.deepcopy(reading)
+        normalized = vision.normalize_reading(reading)
+        self.assertEqual(normalized["grand_total"], "1200.50")
+        self.assertEqual(normalized["items"][0]["amount"], "1200.50")
+        self.assertEqual(reading, original)
+
+    def test_currency_prefix_is_not_an_unreadable_correct_amount(self):
+        report = vision.compare(sample(), [page(grand_total="INR 118.00")])
+        self.assertEqual(
+            next(row for row in report["checks"] if row["field"] == "grand_total")["status"],
+            "match",
+        )
+
+    def test_monetary_percentage_and_quantity_with_currency_remain_unreadable(self):
+        reading = page(grand_total="18%")["reading"]
+        reading["items"][0]["quantity"] = "$2.00"
+        result = vision.normalize_reading(reading)
+        self.assertIsNone(result["grand_total"])
+        self.assertIsNone(result["items"][0]["quantity"])
+
     def test_context_budget_accounts_for_model_image_encoder_tokens(self):
         self.assertEqual(vision.model_options("granite3.2-vision:2b")["num_ctx"], 12288)
         self.assertEqual(vision.model_options("qwen3-vl:2b-instruct-q4_K_M")["num_ctx"], 4096)
@@ -123,7 +162,7 @@ class VisionComparisonTests(unittest.TestCase):
         self.assertFalse(check["editable"])
 
     def test_invalid_numeric_readings_cannot_be_applied(self):
-        for value in ("NaN", "Infinity", "1,200", "--1", "", "9" * 30):
+        for value in ("NaN", "Infinity", "--1", "", "9" * 30):
             report = vision.compare(sample(), [page(grand_total=value)])
             check = next(row for row in report["checks"] if row["field"] == "grand_total")
             self.assertEqual(check["status"], "unreadable")
@@ -257,6 +296,32 @@ class VisionComparisonTests(unittest.TestCase):
 
 
 class VisionApiTests(unittest.TestCase):
+    def test_old_currency_format_report_is_recompared_without_model_or_draft_changes(self):
+        job = self.complete(page(grand_total="INR 118.00"))
+        with store.connection() as db:
+            row = db.execute(
+                "SELECT result_json FROM verification_jobs WHERE id=?", (job["id"],)
+            ).fetchone()
+            result = json.loads(row["result_json"])
+            result.pop("normalization_version", None)
+            result["report"] = {"checks": []}
+            db.execute(
+                "UPDATE verification_jobs SET result_json=? WHERE id=?",
+                (json.dumps(result), job["id"]),
+            )
+        with patch.object(
+            vision, "read_page", side_effect=AssertionError("No model call is needed")
+        ):
+            report = self.client.get(f"/api/documents/bill/verifications/{job['id']}").json()
+        check = next(
+            check
+            for check in report["result"]["report"]["checks"]
+            if check["field"] == "grand_total"
+        )
+        self.assertEqual(check["status"], "match")
+        self.assertEqual(report["result"]["pages"][0]["reading"]["grand_total"], "INR 118.00")
+        self.assertEqual(store.get_document("bill")["invoice"], self.draft)
+
     def test_old_prompt_report_cannot_be_applied_after_an_upgrade(self):
         job = self.complete()
         with store.connection() as db:

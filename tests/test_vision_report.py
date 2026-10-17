@@ -12,11 +12,27 @@ from unittest.mock import patch
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 import report_vision_benchmark as publisher  # noqa: E402
+from benchmark_vision import score  # noqa: E402
 
 from backend import vision  # noqa: E402
 
 
 class VisionReportTests(unittest.TestCase):
+    def test_money_symbols_score_by_value_without_hiding_invalid_abstentions(self):
+        expected = {
+            "supplier_name": "Seller",
+            "bill_number": "B1",
+            "bill_date": "2026-01-02",
+            "currency": "USD",
+            "taxable_total": None,
+            "tax_total": None,
+            "grand_total": 1200.5,
+            "items": [],
+        }
+        actual = {**expected, "grand_total": "$1,200.50", "tax_total": "7%"}
+        result = score(actual, expected)
+        self.assertEqual([entry["field"] for entry in result["mismatches"]], ["tax_total"])
+
     def test_incomplete_run_is_not_published(self):
         with tempfile.TemporaryDirectory(prefix="akshay-report-test-") as directory:
             root = Path(directory).resolve()

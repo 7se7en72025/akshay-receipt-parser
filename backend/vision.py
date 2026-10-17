@@ -21,8 +21,10 @@ from PIL import Image, ImageOps
 from pydantic import BaseModel, ConfigDict, Field
 
 from .config import MAX_IMAGE_PIXELS, MAX_PAGES, OLLAMA_URL, VISION_MODEL, VISION_MODELS
+from .models import number
 
 PROMPT_VERSION = "vision-read-v3"
+NORMALIZATION_VERSION = "money-format-v1"
 IMAGE_EDGE = 1280
 MODEL_OPTIONS = {
     "temperature": 0,
@@ -165,11 +167,14 @@ def read_page(path, mime, page_number, model, timeout=180):
     if payload.get("done_reason") == "length":
         raise ValueError("Model response was truncated; this page has not been verified.")
     reading = PageReading.model_validate_json(payload["message"]["content"])
+    raw_reading = reading.model_dump(mode="json")
     printed_date = reading.bill_date
     reading.bill_date = printed_date_value(printed_date)
     return {
         "page": page_number,
-        "reading": reading.model_dump(mode="json"),
+        "reading": normalize_reading(reading.model_dump(mode="json")),
+        "raw_reading": raw_reading,
+        "normalization_version": NORMALIZATION_VERSION,
         "seconds": round(time.monotonic() - started, 3),
         "output_tokens": payload.get("eval_count"),
         "prompt_version": PROMPT_VERSION,
@@ -177,6 +182,33 @@ def read_page(path, mime, page_number, model, timeout=180):
         "image_edge": IMAGE_EDGE,
         "model_options": model_options(model),
     }
+
+
+def normalize_reading(reading):
+    """Parse known numeric formatting without calculating or balancing values.
+
+    Raw model strings remain separate evidence. A currency prefix is formatting;
+    a percentage in a monetary field is not a monetary amount.
+    """
+    result = json.loads(json.dumps(reading))
+
+    def numeric(value, quantity=False):
+        if value is None:
+            return None
+        text = str(value).strip()
+        if "%" in text or (quantity and not re.fullmatch(r"-?\d[\d,. ]*", text)):
+            return None
+        parsed = number(text)
+        return str(parsed) if parsed is not None else None
+
+    for field in ("taxable_total", "tax_total", "grand_total"):
+        if field in result:
+            result[field] = numeric(result[field])
+    for item in result.get("items", []):
+        item["quantity"] = numeric(item.get("quantity"), quantity=True)
+        for field in ("unit_price", "amount"):
+            item[field] = numeric(item.get(field))
+    return result
 
 
 def printed_date_value(value):
@@ -233,7 +265,9 @@ def decimal(value):
 def compare(invoice, pages):
     """Return comparisons without mutating either source. Never fuzzy-match rows."""
     checks, notices = [], []
-    readings = [(page["page"], page["reading"]) for page in pages if page.get("reading")]
+    readings = [
+        (page["page"], normalize_reading(page["reading"])) for page in pages if page.get("reading")
+    ]
 
     def add(path, current, observed, page, numeric=False, editable=True):
         observed = str(observed) if observed is not None else None
@@ -314,6 +348,9 @@ def compare(invoice, pages):
 
     items = invoice.get("items", [])
     draft_keys = Counter((item.get("source_page", 1), item_key(item)) for item in items)
+    draft_positions = {
+        (item.get("source_page", 1), item_key(item)): index for index, item in enumerate(items)
+    }
     seen = set()
     for page, reading in readings:
         source_keys = Counter(item_key(item) for item in reading["items"])
@@ -324,11 +361,7 @@ def compare(invoice, pages):
                     f"Page {page}: unmatched or repeated item '{source.get('description') or '(unreadable)'}'; review manually."
                 )
                 continue
-            index = next(
-                index
-                for index, item in enumerate(items)
-                if item.get("source_page", 1) == page and item_key(item) == key
-            )
+            index = draft_positions[(page, key)]
             seen.add(index)
             same_currency = not reading.get("currency") or reading["currency"] == invoice.get(
                 "currency"

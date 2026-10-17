@@ -104,7 +104,9 @@ Visible-value accuracy excludes reference fields which the template does not
 print. The whole-bill contract includes header values, row count, every item
 description/quantity/rate/amount in source order, and correct abstention when a
 field is not printed. It is deliberately stricter than adding totals. A failed
-response scores zero correct fields. Exact decimals are compared without
+response scores zero correct fields. Known currency prefixes, suffixes and
+number separators are parsed using the application's numeric reader; raw model
+strings are preserved. Exact decimals are compared without
 balancing, rounding tolerances or changing reference answers.
 
 Full-label agreement is also retained in the JSON report. It is not the primary
@@ -129,6 +131,9 @@ the raw model date reading remains available in the read-only page reading for r
 
 - Copy the printed date as text, then normalize it in code only when its order
   is unambiguous. Schema-constrained ISO conversion had corrupted date digits.
+- Normalize correctly read money such as `$60.00` into a decimal value instead
+  of rejecting it solely because the model retained a currency symbol. Never
+  calculate a new amount or reinterpret percentages as money.
 - Keep a separate printed unit rate and line amount. Handle explicit thermal
   receipt `@ rate each` continuation lines without adding them to item names.
 - Keep `Qty / Value` as one heading and `Unit Price` / `Value` as separate columns.
