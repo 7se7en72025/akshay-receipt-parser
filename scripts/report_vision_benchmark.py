@@ -132,6 +132,11 @@ the verbatim date remains available in the read-only page reading for review.
 - Keep a separate printed unit rate and line amount. Handle explicit thermal
   receipt `@ rate each` continuation lines without adding them to item names.
 - Keep `Qty / Value` as one heading and `Unit Price` / `Value` as separate columns.
+- Read printed quantity-times-description rows in order summaries and Hours/Rate
+  tables. Missing rates stay blank; a separate invoice heading cannot swallow
+  the neighboring supplier name as an invoice number.
+- Read explicit C$/A$/CAD/AUD amount prefixes without converting their values,
+  and avoid counting a tax summary again when GST components are already printed.
 - Retain the known source currency when a payable line only has a dollar sign;
   ambiguous dollars never become INR by default.
 - Bound image resolution, context and evaluation batches after Windows memory
