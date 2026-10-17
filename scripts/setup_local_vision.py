@@ -1,5 +1,6 @@
 """Install a checksum-verified portable Ollama runtime and free vision models on D:."""
 
+import argparse
 import hashlib
 import json
 import os
@@ -16,7 +17,7 @@ ROOT = Path(__file__).resolve().parent.parent
 RUNTIME = Path(os.environ.get("AKSHAY_AI_HOME", "D:/KyvernoBuild/akshay-local-ai"))
 VERSION = "v0.40.5"
 BASE = f"https://github.com/ollama/ollama/releases/download/{VERSION}"
-MODELS = ["qwen3-vl:2b-instruct-q4_K_M", "granite3.2-vision:2b"]
+MODELS = ["qwen3-vl:2b-instruct-q4_K_M"]
 URL = "http://127.0.0.1:11435"
 
 
@@ -86,6 +87,11 @@ def download_runtime(archive, url, client):
 
 
 def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--include-granite", action="store_true",
+                        help="Also install the optional historical comparison model.")
+    args = parser.parse_args()
+    models = MODELS + (["granite3.2-vision:2b"] if args.include_granite else [])
     RUNTIME.mkdir(parents=True, exist_ok=True)
     executable = RUNTIME / "runtime" / "ollama.exe"
     with httpx.Client(follow_redirects=True, trust_env=False, timeout=120) as client:
@@ -165,7 +171,7 @@ def main():
         tags = client.get(URL + "/api/tags")
         tags.raise_for_status()
         installed = {entry["name"] for entry in tags.json()["models"]}
-        for model in MODELS:
+        for model in models:
             if model in installed:
                 print(model + " already installed; retaining its current weights.", flush=True)
                 continue

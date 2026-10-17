@@ -1,5 +1,8 @@
 # Akshay invoice workspace
 
+For local image verification, see [Qwen setup and review](docs/local-qwen.md).
+Setup installs Qwen by default; the historical Granite comparison model is optional.
+
 A local web application for supplier bill extraction, human review and Excel export.
 
 **Workflow:** upload PDF/JPG/PNG files → direct extraction or local OCR → editable draft → validation → staff approval → new Excel workbook.
