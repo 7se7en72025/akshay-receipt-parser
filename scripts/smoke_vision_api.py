@@ -36,6 +36,8 @@ def wait_for(client, path, predicate, seconds=600):
 
 
 def main():
+    from backend import vision
+
     source_manifest = json.loads(
         (ROOT / "data/benchmark/manifest.json").read_text(encoding="utf-8")
     )
@@ -103,6 +105,16 @@ def main():
                 )
                 assert job["status"] == "completed", job
                 assert len(job["result"]["pages"]) == document["page_count"]
+                assert job["result"]["prompt_version"] == vision.PROMPT_VERSION
+                assert job["result"]["normalization_version"] == vision.NORMALIZATION_VERSION
+                for page in job["result"]["pages"]:
+                    expected_reading = vision.normalize_reading(page["raw_reading"])
+                    expected_reading["bill_date"] = vision.printed_date_value(
+                        page["raw_reading"]["bill_date"]
+                    )
+                    assert page["reading"] == expected_reading
+                    assert page["normalization_version"] == vision.NORMALIZATION_VERSION
+                assert job["result"]["report"] == vision.compare(snapshot, job["result"]["pages"])
                 assert not job["stale"]
                 saved = client.get(path).json()
                 assert saved["invoice"] == snapshot and saved["version"] == version
@@ -128,6 +140,8 @@ def main():
                     "source_sha256": row["sha256"],
                     "model": model,
                     "prompt_version": job["result"]["prompt_version"],
+                    "normalization_version": job["result"]["normalization_version"],
+                    "raw_readings_preserved": True,
                     "status": job["status"],
                     "pages_read": len(job["result"]["pages"]),
                     "draft_unchanged": True,

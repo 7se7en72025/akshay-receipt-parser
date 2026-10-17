@@ -28,6 +28,23 @@ def validate_attempts(manifest, directory, model):
                 raise RuntimeError(f"Cached image or generation settings mismatch: {path.name}")
 
 
+def validate_smoke(smoke):
+    from backend import vision
+
+    expected = {
+        "status": "completed",
+        "prompt_version": vision.PROMPT_VERSION,
+        "normalization_version": vision.NORMALIZATION_VERSION,
+        "raw_readings_preserved": True,
+        "draft_unchanged": True,
+        "source_unchanged": True,
+        "invalid_suggestion_rejected": True,
+        "stale_report_rejected": True,
+    }
+    if any(smoke.get(key) != value for key, value in expected.items()):
+        raise RuntimeError("Re-run the real vision API workflow using the current protocol first.")
+
+
 def main():
     from backend import vision
 
@@ -58,6 +75,7 @@ def main():
     original_summary = {key: value for key, value in original.items() if key != "results"}
     api = json.loads((ROOT / "data/benchmark/api-final.json").read_text(encoding="utf-8"))
     smoke = json.loads((CACHE.parent / "api-smoke-result.json").read_text(encoding="utf-8"))
+    validate_smoke(smoke)
     if original["count"] != 100 or api["count"] != 100 or api["failures"]:
         raise RuntimeError("Re-run the original 100-bill regression and API workflow first.")
     templates = dict(Counter(row["_template_used"] for row in manifest["documents"]))

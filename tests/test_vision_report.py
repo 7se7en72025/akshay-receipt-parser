@@ -148,7 +148,20 @@ class VisionReportTests(unittest.TestCase):
                     }
                 )
             )
-            (cache.parent / "api-smoke-result.json").write_text(json.dumps({"status": "completed"}))
+            (cache.parent / "api-smoke-result.json").write_text(
+                json.dumps(
+                    {
+                        "status": "completed",
+                        "prompt_version": vision.PROMPT_VERSION,
+                        "normalization_version": vision.NORMALIZATION_VERSION,
+                        "raw_readings_preserved": True,
+                        "draft_unchanged": True,
+                        "source_unchanged": True,
+                        "invalid_suggestion_rejected": True,
+                        "stale_report_rejected": True,
+                    }
+                )
+            )
             with (
                 patch.object(publisher, "CACHE", cache),
                 patch.object(publisher, "ROOT", root),
@@ -189,3 +202,19 @@ class VisionReportTests(unittest.TestCase):
                         publisher.validate_attempts(manifest, folder, model)
             (folder / "fixture.json").write_text(json.dumps(valid))
             publisher.validate_attempts(manifest, folder, model)
+
+    def test_publication_requires_a_current_complete_api_workflow(self):
+        valid = {
+            "status": "completed",
+            "prompt_version": vision.PROMPT_VERSION,
+            "normalization_version": vision.NORMALIZATION_VERSION,
+            "raw_readings_preserved": True,
+            "draft_unchanged": True,
+            "source_unchanged": True,
+            "invalid_suggestion_rejected": True,
+            "stale_report_rejected": True,
+        }
+        publisher.validate_smoke(valid)
+        for key in valid:
+            with self.subTest(field=key), self.assertRaisesRegex(RuntimeError, "API workflow"):
+                publisher.validate_smoke({**valid, key: None})
