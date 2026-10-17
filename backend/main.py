@@ -7,7 +7,8 @@ import re
 import sqlite3
 from contextlib import asynccontextmanager
 from datetime import date
-from typing import Annotated
+from decimal import Decimal
+from typing import Annotated, Literal
 from uuid import uuid4
 
 import pypdfium2 as pdfium
@@ -140,6 +141,99 @@ def documents():
             version,error,created_at,updated_at FROM documents ORDER BY created_at DESC LIMIT 500"""
         ).fetchall()
     return [present(store.decode(row), include_raw=False) for row in rows]
+
+
+@app.get("/api/inbox")
+def inbox(
+    search: str = Query(default="", max_length=200),
+    status: Literal["all", "review", "approved", "processing"] = "all",
+    date_from: date | None = None,
+    date_to: date | None = None,
+    order: Literal["newest", "bill_date", "amount"] = "newest",
+    page: int = Query(default=1, ge=1),
+    page_size: int = Query(default=25, ge=1, le=100),
+):
+    if date_from and date_to and date_from > date_to:
+        raise HTTPException(422, "The start date must be before the end date.")
+    conditions, parameters = [], []
+    if search.strip():
+        # Treat %, _ and backslashes as literal search characters.
+        term = search.strip().replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+        conditions.append("""(filename || ' ' ||
+            coalesce(json_extract(invoice_json,'$.supplier_name'),'') || ' ' ||
+            coalesce(json_extract(invoice_json,'$.bill_number'),'') || ' ' ||
+            coalesce(json_extract(invoice_json,'$.supplier_gstin'),'') || ' ' ||
+            coalesce(json_extract(invoice_json,'$.purchase_number'),'')) LIKE ? ESCAPE '\\'""")
+        parameters.append(f"%{term}%")
+    for value, operator in ((date_from, ">="), (date_to, "<=")):
+        if value:
+            conditions.append(f"json_extract(invoice_json,'$.bill_date') {operator} ?")
+            parameters.append(value.isoformat())
+    where = " AND ".join(conditions) or "1=1"
+    status_conditions = {
+        "all": "1=1",
+        "review": "status IN ('needs_review','failed')",
+        "approved": "status='approved'",
+        "processing": "status IN ('queued','processing')",
+    }
+    ordering = {
+        "newest": "created_at DESC,id DESC",
+        "bill_date": "json_extract(invoice_json,'$.bill_date') DESC,created_at DESC,id DESC",
+        "amount": "CAST(json_extract(invoice_json,'$.grand_total') AS REAL) DESC,created_at DESC,id DESC",
+    }[order]
+    with store.connection() as db:
+        # Use one read snapshot for counts, totals and the current page.
+        db.execute("BEGIN")
+        total = db.execute("SELECT count(*) FROM documents").fetchone()[0]
+        counts = {
+            row[0]: row[1]
+            for row in db.execute(
+                f"SELECT status,count(*) FROM documents WHERE {where} GROUP BY status",
+                parameters,
+            )
+        }
+        approved_value = sum(
+            (
+                Decimal(str(row[0]))
+                for row in db.execute(
+                    f"SELECT json_extract(invoice_json,'$.grand_total') FROM documents WHERE {where} AND status='approved'",
+                    parameters,
+                )
+                if row[0] is not None
+            ),
+            Decimal(0),
+        )
+        matched = db.execute(
+            f"SELECT count(*) FROM documents WHERE {where} AND {status_conditions[status]}",
+            parameters,
+        ).fetchone()[0]
+        # Clamp a page if filtering or changes in status made the last page empty.
+        page = min(page, max(1, (matched + page_size - 1) // page_size))
+        rows = db.execute(
+            f"""SELECT id,filename,status,method,page_count,version,
+            error,created_at,updated_at,json_object(
+            'supplier_name',json_extract(invoice_json,'$.supplier_name'),
+            'bill_number',json_extract(invoice_json,'$.bill_number'),
+            'bill_date',json_extract(invoice_json,'$.bill_date'),
+            'grand_total',json_extract(invoice_json,'$.grand_total')) AS invoice_json
+            FROM documents WHERE {where} AND {status_conditions[status]}
+            ORDER BY {ordering} LIMIT ? OFFSET ?""",
+            [*parameters, page_size, (page - 1) * page_size],
+        ).fetchall()
+    return {
+        "items": [store.decode(row) for row in rows],
+        "total": total,
+        "matched": matched,
+        "page": page,
+        "page_size": page_size,
+        "counts": {
+            "all": sum(counts.values()),
+            "review": counts.get("needs_review", 0) + counts.get("failed", 0),
+            "approved": counts.get("approved", 0),
+            "processing": counts.get("queued", 0) + counts.get("processing", 0),
+        },
+        "approved_value": str(approved_value),
+    }
 
 
 def detect_type(content):
