@@ -115,12 +115,20 @@ class VisionReportTests(unittest.TestCase):
                         "seconds": 1,
                         "reading": reading,
                         "model_digest": "fixture-digest" if model != "ocr-baseline" else None,
+                        "sha256": row["sha256"],
+                        "prompt_version": vision.PROMPT_VERSION,
+                        "model": model,
+                        "image_edge": vision.IMAGE_EDGE,
+                        "model_options": vision.model_options(model),
                     }
                     if model == publisher.MODELS[-1] and index == 0:
                         result = {
                             "seconds": 180,
                             "error": "fixture timeout",
                             "model_digest": "fixture-digest",
+                            "sha256": row["sha256"],
+                            "prompt_version": vision.PROMPT_VERSION,
+                            "model": model,
                         }
                     (folder / (Path(row["image_file"]).stem + ".json")).write_text(
                         json.dumps(result)
@@ -155,3 +163,29 @@ class VisionReportTests(unittest.TestCase):
             self.assertEqual(granite["results"][0]["printed_score"]["correct"], 0)
             self.assertEqual(granite["protocol"]["model_options"]["num_ctx"], 12288)
             self.assertTrue((root / "docs/testing/200-bill-vision-comparison.md").is_file())
+
+    def test_publication_rejects_mismatched_cached_identity_and_settings(self):
+        with tempfile.TemporaryDirectory(prefix="akshay-report-test-") as directory:
+            folder = Path(directory)
+            manifest = {"documents": [{"image_file": "fixture.png", "sha256": "expected"}]}
+            model = publisher.MODELS[0]
+            valid = {
+                "sha256": "expected",
+                "prompt_version": vision.PROMPT_VERSION,
+                "model": model,
+                "image_edge": vision.IMAGE_EDGE,
+                "model_options": vision.model_options(model),
+            }
+            for field, wrong in (
+                ("sha256", "other-input"),
+                ("prompt_version", "old-prompt"),
+                ("model", "other-model"),
+                ("image_edge", 999),
+                ("model_options", {"num_ctx": 1}),
+            ):
+                with self.subTest(field=field):
+                    (folder / "fixture.json").write_text(json.dumps({**valid, field: wrong}))
+                    with self.assertRaisesRegex(RuntimeError, "mismatch"):
+                        publisher.validate_attempts(manifest, folder, model)
+            (folder / "fixture.json").write_text(json.dumps(valid))
+            publisher.validate_attempts(manifest, folder, model)

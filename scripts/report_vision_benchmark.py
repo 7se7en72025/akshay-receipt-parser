@@ -8,6 +8,26 @@ from pathlib import Path
 from benchmark_vision import CACHE, MODELS, ROOT, summarize
 
 
+def validate_attempts(manifest, directory, model):
+    from backend import vision
+
+    for row in manifest["documents"]:
+        path = directory / (Path(row["image_file"]).stem + ".json")
+        attempt = json.loads(path.read_text(encoding="utf-8"))
+        if (
+            attempt.get("sha256") != row["sha256"]
+            or attempt.get("prompt_version") != vision.PROMPT_VERSION
+            or (model != "ocr-baseline" and attempt.get("model") != model)
+        ):
+            raise RuntimeError(f"Cached input identity or protocol mismatch: {path.name}")
+        if model != "ocr-baseline" and not attempt.get("error"):
+            if (
+                attempt.get("image_edge") != vision.IMAGE_EDGE
+                or attempt.get("model_options") != vision.model_options(model)
+            ):
+                raise RuntimeError(f"Cached image or generation settings mismatch: {path.name}")
+
+
 def main():
     from backend import vision
 
@@ -24,6 +44,7 @@ def main():
             != 100
         ):
             raise RuntimeError(f"Complete all 100 input attempts for {model} before publishing.")
+        validate_attempts(manifest, directory, model)
         summarize(manifest, directory, model, 100)
         result = json.loads((directory / "summary.json").read_text(encoding="utf-8"))
         if model != "ocr-baseline":
