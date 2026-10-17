@@ -85,6 +85,7 @@ def score(reading, expected):
     from backend.vision import decimal, normalized
 
     checks, mismatches = [], []
+    visible_checks, abstention_checks = [], []
 
     def check(path, actual, wanted, numeric=False):
         equal = (
@@ -95,6 +96,7 @@ def score(reading, expected):
         if wanted is None:
             equal = actual is None or actual == ""
         checks.append(equal)
+        (abstention_checks if wanted is None else visible_checks).append(equal)
         if not equal:
             mismatches.append(
                 {
@@ -133,6 +135,10 @@ def score(reading, expected):
         "checked": len(checks),
         "exact": all(checks),
         "mismatches": mismatches,
+        "visible_correct": sum(visible_checks),
+        "visible_checked": len(visible_checks),
+        "abstention_correct": sum(abstention_checks),
+        "abstention_checked": len(abstention_checks),
     }
 
 
@@ -142,11 +148,18 @@ def main():
     parser.add_argument("--model", choices=MODELS)
     parser.add_argument("--retry-errors", action="store_true")
     parser.add_argument(
+        "--refresh",
+        action="store_true",
+        help="Re-run cached inputs, retaining prior attempts in their local result files.",
+    )
+    parser.add_argument(
         "--baseline",
         action="store_true",
         help="Evaluate the deterministic OCR extractor instead of vision models.",
     )
     args = parser.parse_args()
+    if not 1 <= args.limit <= 100:
+        parser.error("--limit must be between 1 and 100")
     from backend import vision
 
     manifest = json.loads((CACHE / "manifest.json").read_text(encoding="utf-8"))
@@ -173,6 +186,7 @@ def main():
             if hashlib.sha256(source.read_bytes()).hexdigest() != row["sha256"]:
                 raise ValueError("Source image checksum mismatch.")
             result_file = model_dir / (source.stem + ".json")
+            previous_attempts = []
             if result_file.exists():
                 result = json.loads(result_file.read_text(encoding="utf-8"))
                 if (
@@ -181,9 +195,12 @@ def main():
                     or (model_digest and result.get("model_digest") != model_digest)
                 ):
                     raise ValueError("Cached run does not match the evaluation input.")
-                if not (args.retry_errors and result.get("error")):
+                if not args.refresh and not (args.retry_errors and result.get("error")):
                     print(f"{model} {index}/{len(rows)} cached", flush=True)
                     continue
+                previous_attempts = result.get("previous_attempts", []) + [
+                    {key: value for key, value in result.items() if key != "previous_attempts"}
+                ]
             started = time.monotonic()
             try:
                 # The source image and shared prompt are the only inputs.
@@ -199,6 +216,8 @@ def main():
                 }
             result.update({"sha256": row["sha256"], "prompt_version": vision.PROMPT_VERSION})
             result["model_digest"] = model_digest
+            if previous_attempts:
+                result["previous_attempts"] = previous_attempts
             result_file.write_text(json.dumps(result, indent=2), encoding="utf-8")
             print(
                 f"{model} {index}/{len(rows)} {result['seconds']}s {'ERROR' if result.get('error') else 'read'}",
@@ -269,6 +288,7 @@ def summarize(manifest, model_dir, model, count):
             "seconds": result["seconds"],
             "error": result.get("error"),
             "model_digest": result.get("model_digest"),
+            "previous_attempts": len(result.get("previous_attempts", [])),
         }
         # Failed/malformed/timed-out responses count as failures, never omitted.
         reading = result.get("reading") or {}
@@ -278,6 +298,8 @@ def summarize(manifest, model_dir, model, count):
             for kind in ("label_score", "printed_score"):
                 record[kind]["correct"] = 0
                 record[kind]["exact"] = False
+                record[kind]["visible_correct"] = 0
+                record[kind]["abstention_correct"] = 0
         results.append(record)
     printed = [result["printed_score"] for result in results]
     summary = {
@@ -304,6 +326,10 @@ def summarize(manifest, model_dir, model, count):
         ),
         "printed_correct_fields": sum(result["correct"] for result in printed),
         "printed_checked_fields": sum(result["checked"] for result in printed),
+        "visible_correct_fields": sum(result["visible_correct"] for result in printed),
+        "visible_checked_fields": sum(result["visible_checked"] for result in printed),
+        "abstention_correct_fields": sum(result["abstention_correct"] for result in printed),
+        "abstention_checked_fields": sum(result["abstention_checked"] for result in printed),
         "median_seconds": statistics.median(result["seconds"] for result in results)
         if results
         else None,
