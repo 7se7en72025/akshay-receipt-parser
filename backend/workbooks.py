@@ -91,11 +91,21 @@ def check_xlsx(path):
         raise ValueError("This file is not a readable .xlsx workbook.") from error
 
 
-def inspect_template(path: Path, sheet_name=None, header_row=1):
+def inspect_template(path: Path, sheet_name=None, header_row=None):
     check_xlsx(path)
     wb = load_workbook(path, read_only=True, data_only=False, keep_links=False)
     try:
         sheet = wb[sheet_name] if sheet_name else wb.active
+        if header_row is None:
+            candidates = list(sheet.iter_rows(min_row=1, max_row=40, max_col=60, values_only=True))
+            scored = [
+                (sum(clean(value) in ALIASES for value in row if value is not None), index + 1)
+                for index, row in enumerate(candidates)
+                if any(value is not None for value in row)
+            ]
+            if not scored:
+                raise ValueError("No headings were found in the first 40 rows.")
+            header_row = max(scored, key=lambda candidate: (candidate[0], -candidate[1]))[1]
         if not 1 <= header_row <= 200:
             raise ValueError("Choose a header row from 1 to 200.")
         values = next(
