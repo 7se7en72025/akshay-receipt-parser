@@ -14,7 +14,7 @@ from uuid import uuid4
 import pypdfium2 as pdfium
 from fastapi import FastAPI, File, Form, HTTPException, Query, Request, UploadFile
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
-from fastapi.responses import FileResponse, HTMLResponse
+from fastapi.responses import FileResponse, HTMLResponse, Response
 from fastapi.staticfiles import StaticFiles
 from PIL import Image
 from pydantic import BaseModel
@@ -34,7 +34,7 @@ from .config import (
 )
 from .models import ApproveRequest, ExportRequest, Invoice, SaveRequest, TemplateConfig
 from .validation import validate_invoice
-from .workbooks import FIELDS, create_export, inspect_template
+from .workbooks import FIELDS, SUMMARY_FIELDS, create_export, default_workbook, inspect_template
 
 logging.basicConfig(level=logging.INFO)
 
@@ -130,6 +130,14 @@ def health():
         "ocr_installed": importlib.util.find_spec("rapidocr") is not None,
         "limits": {"file_mb": 15, "batch_files": MAX_BATCH_FILES, "pages": 25},
         "export_fields": FIELDS,
+        "default_format": {
+            "name": "Default Excel format",
+            "version": 1,
+            "sheets": {
+                "Line Items": list(FIELDS.values()),
+                "Bill Summary": list(SUMMARY_FIELDS.values()),
+            },
+        },
     }
 
 
@@ -215,7 +223,8 @@ def inbox(
             'supplier_name',json_extract(invoice_json,'$.supplier_name'),
             'bill_number',json_extract(invoice_json,'$.bill_number'),
             'bill_date',json_extract(invoice_json,'$.bill_date'),
-            'grand_total',json_extract(invoice_json,'$.grand_total')) AS invoice_json
+            'grand_total',json_extract(invoice_json,'$.grand_total'),
+            'currency',coalesce(json_extract(invoice_json,'$.currency'),'INR')) AS invoice_json
             FROM documents WHERE {where} AND {status_conditions[status]}
             ORDER BY {ordering} LIMIT ? OFFSET ?""",
             [*parameters, page_size, (page - 1) * page_size],
@@ -381,6 +390,11 @@ def save_document(document_id, payload, approve=False, action=None, restore_even
     document = document_or_404(document_id)
     if document["status"] in {"queued", "processing"}:
         raise HTTPException(409, "Wait for processing to finish before editing.")
+    if document.get("source_currency") and payload.invoice.currency != document["source_currency"]:
+        raise HTTPException(
+            422,
+            "The source currency cannot be relabelled. Currency conversion is not supported in this INR workspace.",
+        )
     if any(item.source_page > document["page_count"] for item in payload.invoice.items):
         raise HTTPException(422, "An item refers to a page outside this document.")
     validation = validate_invoice(
@@ -505,6 +519,21 @@ def templates():
     with store.connection() as db:
         rows = db.execute("SELECT * FROM templates ORDER BY created_at DESC").fetchall()
     return [{**dict(row), "config": json.loads(row["config_json"])} for row in rows]
+
+
+@app.get("/api/templates/default/download")
+def download_default_format():
+    workbook = default_workbook()
+    output = io.BytesIO()
+    try:
+        workbook.save(output)
+    finally:
+        workbook.close()
+    return Response(
+        output.getvalue(),
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": 'attachment; filename="akshay-default-format.xlsx"'},
+    )
 
 
 @app.post("/api/templates", status_code=201)

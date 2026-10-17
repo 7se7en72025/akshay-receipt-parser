@@ -28,6 +28,8 @@ class Item(BaseModel):
     igst_amount: Number | None = None
     cess_amount: Number | None = None
     source_page: int = Field(default=1, ge=1, le=25)
+    secondary_amount: Number | None = None
+    secondary_currency: str = Field(default="", pattern=r"^(?:[A-Z]{3})?$")
 
     @field_validator("*", mode="before")
     @classmethod
@@ -60,6 +62,15 @@ class Invoice(BaseModel):
     bill_number: str = Field(default="", max_length=150)
     bill_date: date | None = None
     purchase_number: str = Field(default="", max_length=150)
+    currency: str = Field(default="INR", pattern=r"^[A-Z]{3}$")
+    other_tax_total: Number | None = None
+    charges_total: Number | None = None
+    discount_total: Number | None = None
+    withholding_total: Number | None = None
+    amounts_include_tax: bool = False
+    secondary_currency: str | None = Field(default=None, pattern=r"^[A-Z]{3}$")
+    secondary_subtotal: Number | None = None
+    exchange_rate: Number | None = None
     taxable_total: Number | None = None
     sgst_total: Number | None = None
     cgst_total: Number | None = None
@@ -79,6 +90,12 @@ class Invoice(BaseModel):
         "cess_total",
         "round_off",
         "grand_total",
+        "other_tax_total",
+        "charges_total",
+        "discount_total",
+        "withholding_total",
+        "secondary_subtotal",
+        "exchange_rate",
         mode="before",
     )
     @classmethod
@@ -111,8 +128,22 @@ class TemplateConfig(BaseModel):
 def number(value) -> Decimal | None:
     if value is None:
         return None
-    text = str(value).replace(",", "").replace("₹", "").replace("INR", "").strip()
+    text = str(value).strip()
+    text = re.sub(r"^(?:INR|USD|EUR|GBP|NAD|ZAR|ZMW|US\$|N\$|R|K|[$₹£€])\s*", "", text, flags=re.I)
+    text = re.sub(r"\s*(?:INR|USD|EUR|GBP|NAD|ZAR|ZMW|[$₹£€%])$", "", text, flags=re.I)
     text = re.sub(r"\s+", "", text)
+    if "," in text and "." in text:
+        text = (
+            text.replace(".", "").replace(",", ".")
+            if text.rfind(",") > text.rfind(".")
+            else text.replace(",", "")
+        )
+    elif "," in text:
+        text = (
+            text.replace(",", ".")
+            if re.fullmatch(r"-?\d+,\d{1,2}", text)
+            else text.replace(",", "")
+        )
     if not re.fullmatch(r"-?\d+(?:\.\d+)?", text):
         return None
     try:

@@ -11,6 +11,29 @@ def validate_invoice(invoice: Invoice, duplicate_ids=None):
     def issue(level, field, message, row=None):
         issues.append({"level": level, "field": field, "message": message, "row": row})
 
+    if invoice.currency != "INR":
+        issue(
+            "error",
+            "currency",
+            f"This workspace approves INR purchases only. The source currency is {invoice.currency}; do not treat these amounts as INR.",
+        )
+    if (
+        invoice.secondary_subtotal is not None
+        and invoice.exchange_rate is not None
+        and invoice.grand_total is not None
+    ):
+        converted = (invoice.secondary_subtotal * invoice.exchange_rate).quantize(Decimal("0.01"))
+        local_net = invoice.grand_total - (invoice.other_tax_total or Decimal(0))
+        has_printed_local_rows = bool(invoice.items) and all(
+            item.secondary_currency and item.taxable_amount is not None for item in invoice.items
+        )
+        if converted != local_net and not has_printed_local_rows:
+            issue(
+                "warning",
+                "exchange_rate",
+                f"The printed exchange rate gives {converted:.2f}; the payable net amount is {local_net:.2f}. Original entries are preserved; confirm the currency rounding.",
+            )
+
     for field, label in [
         ("supplier_name", "Supplier name"),
         ("bill_number", "Bill number"),
@@ -68,6 +91,8 @@ def validate_invoice(invoice: Invoice, duplicate_ids=None):
             issue("warning", total_field, f"{label} total is not recorded.")
         elif entries and all(value is not None for value in entries):
             calculated = sum(entries, Decimal(0))
+            if item_field == "taxable_amount" and invoice.amounts_include_tax:
+                calculated -= invoice.other_tax_total or Decimal(0)
             if abs(calculated - printed) > TOLERANCE:
                 issue(
                     "error",
@@ -84,7 +109,14 @@ def validate_invoice(invoice: Invoice, duplicate_ids=None):
         invoice.cess_total,
     ]
     if invoice.grand_total is not None and all(value is not None for value in tax_values):
-        calculated = sum(tax_values, Decimal(0)) + (invoice.round_off or Decimal(0))
+        calculated = (
+            sum(tax_values, Decimal(0))
+            + (invoice.round_off or Decimal(0))
+            + (invoice.other_tax_total or Decimal(0))
+            + (invoice.charges_total or Decimal(0))
+            - (invoice.discount_total or Decimal(0))
+            - (invoice.withholding_total or Decimal(0))
+        )
         if abs(calculated - invoice.grand_total) > TOLERANCE:
             issue(
                 "error",

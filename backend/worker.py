@@ -13,7 +13,7 @@ STOP = threading.Event()
 
 
 def process_document(document_id):
-    from .ai import assist
+    from .ai import assist, merge_proposal
     from .extraction import extract_document
 
     document = store.get_document(document_id)
@@ -21,10 +21,14 @@ def process_document(document_id):
         result = extract_document(UPLOADS / document["storage_name"], document["mime"])
         if document["use_ai"]:
             try:
-                result["invoice"] = assist(result["raw_text"], result["page_count"])
+                proposal = assist(result["raw_text"], result["page_count"])
+                result["invoice"], merge_notes = merge_proposal(
+                    result["invoice"], proposal, result["raw_text"]
+                )
+                result["notes"].extend(merge_notes)
                 result["method"] += "+local-ai"
                 result["notes"].append(
-                    "A local AI model proposed these entries. Verify all amounts and item rows."
+                    "Local AI filled source-backed missing fields. Existing extracted values were preserved. Verify the draft."
                 )
             except Exception as error:
                 logger.warning("AI assist failed for %s: %s", document_id, error)
@@ -35,7 +39,7 @@ def process_document(document_id):
             db.execute(
                 """UPDATE documents SET status='needs_review', invoice_json=?,raw_text=?,
                 raw_tables=?,extraction_notes=?,method=?,page_count=?,error=NULL,
-                version=version+1,updated_at=? WHERE id=? AND status='processing'""",
+                source_currency=?,version=version+1,updated_at=? WHERE id=? AND status='processing'""",
                 (
                     result["invoice"].model_dump_json(),
                     result["raw_text"],
@@ -43,6 +47,7 @@ def process_document(document_id):
                     json.dumps(result["notes"]),
                     result["method"],
                     result["page_count"],
+                    result["invoice"].currency,
                     store.now(),
                     document_id,
                 ),

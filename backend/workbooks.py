@@ -29,7 +29,7 @@ FIELDS = {
     "unit_price": "Rate",
     "discount_1": "Discount 1",
     "discount_2": "Discount 2",
-    "taxable_amount": "Taxable Amount",
+    "taxable_amount": "Printed Item Amount",
     "sgst_rate": "SGST %",
     "sgst_amount": "SGST Amount",
     "cgst_rate": "CGST %",
@@ -39,8 +39,37 @@ FIELDS = {
     "cess_amount": "Cess Amount",
     "source_file": "Source File",
     "source_page": "Source Page",
+    "currency": "Currency",
+    "amounts_include_tax": "Item Amounts Include Tax",
+    "secondary_amount": "Original Currency Amount",
+    "secondary_currency": "Original Currency",
+}
+SUMMARY_FIELDS = {
+    "bill_number": "Bill No.",
+    "bill_date": "Bill Date",
+    "supplier_name": "Supplier",
+    "supplier_gstin": "Supplier GSTIN",
+    "purchase_number": "Purchase No.",
+    "taxable_total": "Taxable Total",
+    "sgst_total": "SGST Total",
+    "cgst_total": "CGST Total",
+    "igst_total": "IGST Total",
+    "cess_total": "Cess Total",
+    "other_tax_total": "Other Tax / VAT",
+    "charges_total": "Shipping / Other Charges",
+    "discount_total": "Bill Discount",
+    "withholding_total": "Withholding Tax",
+    "amounts_include_tax": "Item Amounts Include Tax",
+    "round_off": "Round Off",
+    "grand_total": "Grand Total",
+    "currency": "Currency",
+    "secondary_subtotal": "Original Subtotal",
+    "secondary_currency": "Original Currency",
+    "exchange_rate": "Exchange Rate",
+    "source_file": "Source File",
 }
 NUMERIC = {
+    "secondary_amount",
     "quantity",
     "unit_price",
     "discount_1",
@@ -70,6 +99,7 @@ ALIASES.update(
         "uom": "unit",
         "unitprice": "unit_price",
         "taxablevalue": "taxable_amount",
+        "taxableamount": "taxable_amount",
         "cgst": "cgst_amount",
         "sgst": "sgst_amount",
         "igst": "igst_amount",
@@ -167,6 +197,8 @@ def rows_for(documents):
                 "supplier_name",
                 "supplier_gstin",
                 "purchase_number",
+                "currency",
+                "amounts_include_tax",
             ]
         }
         for item in invoice.items:
@@ -194,6 +226,19 @@ def style_sheet(sheet):
             cell.alignment = Alignment(vertical="top", wrap_text=True)
             if cell.data_type == "n":
                 cell.number_format = "#,##0.00"
+
+
+def default_workbook():
+    """The fixed built-in format; headings are shared with actual exports."""
+    wb = Workbook()
+    items = wb.active
+    items.title = "Line Items"
+    items.append(list(FIELDS.values()))
+    summary = wb.create_sheet("Bill Summary")
+    summary.append(list(SUMMARY_FIELDS.values()))
+    style_sheet(items)
+    style_sheet(summary)
+    return wb
 
 
 def create_export(documents, template=None):
@@ -229,55 +274,22 @@ def create_export(documents, template=None):
                     cell._style = copy.copy(seed._style)
                 assign(cell, row.get(field), field in NUMERIC)
     else:
-        wb = Workbook()
-        sheet = wb.active
-        sheet.title = "Line Items"
-        sheet.append(list(FIELDS.values()))
+        wb = default_workbook()
+        sheet = wb["Line Items"]
         for row_index, row in enumerate(rows, start=2):
             for column, field in enumerate(FIELDS, start=1):
                 assign(sheet.cell(row_index, column), row.get(field), field in NUMERIC)
         style_sheet(sheet)
-        summary = wb.create_sheet("Bill Summary")
-        summary_fields = [
-            "bill_number",
-            "bill_date",
-            "supplier_name",
-            "supplier_gstin",
-            "purchase_number",
-            "taxable_total",
-            "sgst_total",
-            "cgst_total",
-            "igst_total",
-            "cess_total",
-            "round_off",
-            "grand_total",
-            "source_file",
-        ]
-        summary.append(
-            [
-                "Bill No.",
-                "Bill Date",
-                "Supplier",
-                "Supplier GSTIN",
-                "Purchase No.",
-                "Taxable Total",
-                "SGST Total",
-                "CGST Total",
-                "IGST Total",
-                "Cess Total",
-                "Round Off",
-                "Grand Total",
-                "Source File",
-            ]
-        )
+        summary = wb["Bill Summary"]
         for row_index, document in enumerate(documents, start=2):
             invoice = Invoice.model_validate(document["invoice"])
-            for column, field in enumerate(summary_fields, start=1):
+            for column, field in enumerate(SUMMARY_FIELDS, start=1):
                 value = document["filename"] if field == "source_file" else getattr(invoice, field)
                 assign(
                     summary.cell(row_index, column),
                     value,
-                    field.endswith("_total") or field == "round_off",
+                    field.endswith("_total")
+                    or field in {"round_off", "secondary_subtotal", "exchange_rate"},
                 )
         style_sheet(summary)
     export_id = uuid4().hex

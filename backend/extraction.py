@@ -6,8 +6,10 @@ from pathlib import Path
 import pdfplumber
 import pypdfium2 as pdfium
 from PIL import Image, ImageOps
+from pydantic import ValidationError
 
 from .config import MAX_IMAGE_PIXELS, MAX_PAGES
+from .layouts import borderless_tables, generic_fields, vendor_from_words
 from .models import Invoice, Item, number
 
 Image.MAX_IMAGE_PIXELS = MAX_IMAGE_PIXELS
@@ -29,7 +31,7 @@ def parse_date(value):
 def header_fields(text):
     data = {}
     match = re.search(
-        r"(?:bill|invoice)\s*(?:no\.?|number|#)\s*:?\s*([A-Z0-9][A-Z0-9./_-]+)",
+        r"(?:bill|invoice)\s*(?:no\b\.?|number\b|#)\s*:?\s*([A-Z0-9][A-Z0-9./_-]+)",
         text,
         re.I,
     )
@@ -99,7 +101,7 @@ def column_field(parent, child, discount_index):
         return "description"
     if name.startswith("hsn"):
         return "hsn"
-    if name in {"qty", "quantity", "nos", "qnty", "qtyunit"}:
+    if name in {"qty", "quantity", "nos", "qnty", "qtyunit", "qtyvalue"}:
         return "quantity"
     if name in {"unit", "uom", "units"}:
         return "unit"
@@ -107,7 +109,9 @@ def column_field(parent, child, discount_index):
         return "unit_price"
     if name.startswith(("disc", "discount")):
         return "discount_1" if discount_index <= 1 else "discount_2"
-    if name.startswith("taxable") or name in {"amount", "amt", "value", "netamount"}:
+    if name.startswith(
+        ("taxable", "amountexcl", "amountincl", "amountusd", "amountzar", "amountnad", "amounteur")
+    ) or name in {"amount", "amt", "value", "netamount", "total"}:
         return "taxable_amount"
     for aliases, tax in [
         (("sugst", "sgst", "sgstugst", "utgst"), "sgst"),
@@ -130,7 +134,8 @@ def table_items(rows, page_number):
         labels = [clean(cell) for cell in row]
         has_description = any(column_field(label, "", 0) == "description" for label in labels)
         has_quantity = any(column_field(label, "", 0) == "quantity" for label in labels)
-        if has_description and has_quantity:
+        has_amount = any(column_field(label, "", 0) == "taxable_amount" for label in labels)
+        if has_description and (has_quantity or has_amount):
             header_index = index
             break
     if header_index is None:
@@ -157,15 +162,25 @@ def table_items(rows, page_number):
         mapping[index] = column_field(
             current, child[index] if index < len(child) else "", discount_index
         )
+    amount_columns = [index for index, field in mapping.items() if field == "taxable_amount"]
+    secondary_currency = ""
+    if len(amount_columns) > 1:
+        first_label = str(parents[amount_columns[0]] or "")
+        last_label = str(parents[amount_columns[-1]] or "")
+        first_currency = re.search(r"\b(USD|EUR|GBP|NAD|ZAR|INR)\b", first_label)
+        last_currency = re.search(r"\b(USD|EUR|GBP|NAD|ZAR|INR)\b", last_label)
+        if first_currency and last_currency and first_currency[0] != last_currency[0]:
+            mapping[amount_columns[0]] = "secondary_amount"
+            secondary_currency = first_currency[0]
     for row in rows[data_start:]:
-        values = {"source_page": page_number}
+        values = {"source_page": page_number, "secondary_currency": secondary_currency}
         for index, cell in enumerate(row):
             field = mapping.get(index)
             if not field or not cell or field in values:
                 continue
             value = re.sub(r"\s+", " ", str(cell)).strip()
             if field == "quantity":
-                qty = re.match(r"^\s*([\d,.]+)\s*(.*?)\s*$", value)
+                qty = re.match(r"^\s*([\d,.]+(?:\s+\d{3}(?:[.,]\d+)?)*)\s*(.*?)\s*$", value)
                 if qty:
                     values["quantity"] = number(qty[1])
                     if qty[2]:
@@ -192,14 +207,15 @@ def table_items(rows, page_number):
         ):
             try:
                 result.append(Item.model_validate(values))
-            except ValueError:
-                # Retain the row as a draft instead of silently losing the product.
-                text_values = {
-                    key: value
-                    for key, value in values.items()
-                    if key in {"description", "hsn", "unit", "source_page"}
-                }
-                result.append(Item.model_validate(text_values))
+            except ValidationError as error:
+                # Keep every valid field. One invalid number must not erase the
+                # other correctly extracted entries on this row.
+                invalid = {entry["loc"][0] for entry in error.errors()}
+                result.append(
+                    Item.model_validate(
+                        {key: value for key, value in values.items() if key not in invalid}
+                    )
+                )
     return result
 
 
@@ -226,6 +242,7 @@ def ocr_page(image):
         records.append(
             {
                 "x": float(min(point[0] for point in box)),
+                "x1": float(max(point[0] for point in box)),
                 "y": float(sum(point[1] for point in box) / 4),
                 "height": float(max(point[1] for point in box) - min(point[1] for point in box)),
                 "text": text,
@@ -262,20 +279,40 @@ def ocr_page(image):
                     cells[position] = (cells[position] + " " + token["text"]).strip()
                 table.append(cells)
             break
-    return text, [table] if table else [], records
+    layout_tables = borderless_tables(
+        [
+            {
+                "text": record["text"],
+                "x0": record["x"],
+                "x1": record["x1"],
+                "top": record["y"] - record["height"] / 2,
+            }
+            for record in records
+        ]
+    )
+    return text, layout_tables or ([table] if table else []), records
 
 
 def extract_document(path: Path, mime: str):
     texts, tables, items, methods, notes = [], [], [], set(), []
     page_count = 1
+    vendor = ""
     if mime == "application/pdf":
         with pdfplumber.open(path) as pdf:
             page_count = len(pdf.pages)
             if not 1 <= page_count <= MAX_PAGES:
                 raise ValueError(f"PDF must contain 1 to {MAX_PAGES} pages.")
             for page_index, page in enumerate(pdf.pages):
+                if page_index == 0:
+                    vendor = vendor_from_words(
+                        page.extract_words(x_tolerance=1, extra_attrs=["fontname", "size"])
+                    )
                 page_text = page.extract_text(x_tolerance=1) or ""
                 page_tables = page.extract_tables(table_settings={"text_x_tolerance": 1})
+                if not any(table_items(table, page_index + 1) for table in page_tables):
+                    page_tables = (
+                        borderless_tables(page.extract_words(x_tolerance=1)) or page_tables
+                    )
                 large_image = any(
                     (image["x1"] - image["x0"]) * (image["bottom"] - image["top"])
                     > page.width * page.height * 0.4
@@ -314,7 +351,35 @@ def extract_document(path: Path, mime: str):
             tables.append({"page": 1, "rows": raw_table})
             items.extend(table_items(raw_table, 1))
     raw_text = "\n\n".join(texts)
-    invoice = Invoice(**header_fields(raw_text), items=items)
+    fields = generic_fields(raw_text)
+    if vendor:
+        fields["supplier_name"] = vendor
+    fields.update(header_fields(raw_text))
+    invoice = Invoice(**fields, items=items)
+    if (
+        invoice.secondary_currency
+        and items
+        and all(
+            item.secondary_currency == invoice.secondary_currency
+            and item.taxable_amount is not None
+            for item in items
+        )
+    ):
+        # Printed converted line amounts may be rounded individually. Sum those
+        # explicit values instead of converting a subtotal and forcing a match.
+        invoice.taxable_total = sum(item.taxable_amount for item in items)
+    if invoice.currency != "INR":
+        notes.append(
+            f"Source currency is {invoice.currency}. This INR workspace cannot approve foreign-currency bills."
+        )
+    if invoice.amounts_include_tax:
+        notes.append(
+            "Printed item amounts include VAT. They are retained unchanged; the net subtotal is total minus the explicitly included tax."
+        )
+    if invoice.secondary_currency:
+        notes.append(
+            "Dual currencies are printed. Item values retain the source currency; the net subtotal is converted using the printed exchange rate. Review both amounts."
+        )
     # Missing printed zero-tax totals can be established from explicit per-row zeros.
     for prefix in ("sgst", "cgst", "igst", "cess"):
         total_field = prefix + "_total"

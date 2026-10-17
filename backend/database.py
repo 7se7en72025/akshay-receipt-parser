@@ -58,8 +58,14 @@ def initialize():
         CREATE INDEX IF NOT EXISTS documents_bill_number
           ON documents(lower(json_extract(invoice_json,'$.bill_number')));
         CREATE INDEX IF NOT EXISTS events_document ON review_events(document_id, created_at DESC);
-        PRAGMA user_version=1;
         """)
+        columns = {row["name"] for row in db.execute("PRAGMA table_info(documents)")}
+        if "source_currency" not in columns:
+            db.execute("ALTER TABLE documents ADD COLUMN source_currency TEXT")
+        db.execute("""UPDATE documents SET source_currency=coalesce(
+            json_extract(invoice_json,'$.currency'),'INR') WHERE source_currency IS NULL
+            AND status NOT IN ('queued','processing')""")
+        db.execute("PRAGMA user_version=2")
         # This is a single-process local workspace. Recover interrupted jobs on startup.
         db.execute("UPDATE documents SET status='queued', error=NULL WHERE status='processing'")
 
