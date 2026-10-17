@@ -78,6 +78,8 @@ Select an activity in Checks & history to inspect its saved values and review no
 
 Use Excel templates → Attach .xlsx template. The app suggests a heading row based on recognised field names; confirm it.
 
+**Default Excel format** is always available and selected by default during export. It has fixed Line Items and Bill Summary columns, a read-only column preview and a Download blank format button. It cannot be remapped or edited inside the app. Its download endpoint is `/api/templates/default/download`. Custom templates are separate, optional workbooks. Downloaded Excel files can still be edited externally; the fixed-format rule applies to this application.
+
 Choose the worksheet and heading row, then select Read headings. Map the columns and confirm an empty insertion row. Save the mapping before exporting. The original workbook is preserved.
 
 Only agreed .xlsx layouts are supported. Existing formulas are retained where possible but not calculated by openpyxl. Shapes, macros, advanced charts and every Excel feature are not guaranteed to round-trip. Formula cells and existing mapped data are not overwritten. Export is capped at 10,000 product rows.
@@ -91,7 +93,7 @@ The standard PDF/OCR path does not require a general AI model. To enable assiste
 3. Copy .env.example to .env and set AKSHAY_OLLAMA_MODEL to its exact installed model name.
 4. Restart the backend.
 
-The model endpoint must be loopback-only. The app sends extracted text, not image files, to this optional text model. Scans go through OCR first. It requests an Invoice-shaped JSON response and validates it before replacing the draft. If assistance fails, the direct/OCR draft is retained.
+The model endpoint must be loopback-only. The app sends extracted text, not image files, to this optional text model. Scans go through OCR first. It requests an Invoice-shaped JSON response and validates it. AI may fill source-backed missing fields but cannot overwrite existing extracted values, remove source rows or change the source currency. Conflicts are recorded in extraction notes. If assistance fails, the direct/OCR draft is retained. Re-extraction still replaces your saved draft after explicit confirmation; prior versions remain in history.
 
 A valid schema does not prove the values are correct. AI proposals require the same staff review. Models are not downloaded automatically by this application.
 
@@ -161,4 +163,18 @@ cd frontend
 bun run build
 ~~~
 
-No test suite has been added or run. Real invoice formats still require operator review. POS integration, live inventory, student shopping and historical POS database migration are not part of this invoice MVP.
+## Tests and public invoice evaluation
+
+~~~powershell
+.\.venv\Scripts\python.exe -m unittest discover -s tests -v
+.\.venv\Scripts\python.exe scripts\benchmark_invoices.py --download --label final-currency --strict
+.\.venv\Scripts\python.exe scripts\benchmark_api.py
+~~~
+
+The public evaluation downloads 100 distinct synthetic invoices from a pinned revision of the CC BY 4.0 [Drew IPP benchmark](https://huggingface.co/datasets/drew-ipp/invoice-extraction-benchmark), verifies SHA-256 checksums and compares against separately authored reference labels. PDFs, cached labels and detailed local reports stay in ignored `data/benchmark/`. The application never loads benchmark labels. The API evaluation uses a separate temporary database and local port 18091; it does not add test bills to your workspace.
+
+See [the evaluation report](docs/testing/100-bill-evaluation.md) for scope and results. `--strict` allows one documented source exchange-rate rounding discrepancy only when flagged for review; it does not count that case as an exact extraction. Any other mismatch fails the command.
+
+Foreign-currency documents can be reviewed but cannot be approved or exported as INR. Their source currency is stored separately and cannot be relabelled through a save request. Printed item amounts and totals are retained; VAT-inclusive normalization and dual-currency calculations are disclosed in extraction notes. New layouts, languages and unclear photos still require human review.
+
+POS integration, live inventory, student shopping and historical POS database migration are not part of this invoice MVP.

@@ -1,0 +1,826 @@
+{
+  "source": "https://huggingface.co/datasets/drew-ipp/invoice-extraction-benchmark",
+  "revision": "446bab08662790cb39457792243bff5704373b95",
+  "license": "CC-BY-4.0",
+  "date": "2026-10-17",
+  "count": 100,
+  "exact_bills": 99,
+  "line_items_checked": 955,
+  "api_workflow": {
+    "count": 100,
+    "failures": [],
+    "round_trip_exact": 100,
+    "source_checksums_exact": 100,
+    "foreign_approval_blocked": 100,
+    "currency_relabelling_blocked": 100,
+    "unapproved_export_blocked": true
+  },
+  "documents": [
+    {
+      "id": "clean-de-grid-eu-decimals",
+      "category": "clean",
+      "source_sha256": "8dcd79335c81e94f310c557db92bcaedd2b3989af392c12481c2883d984fe8a5",
+      "exact": true,
+      "mismatches": [],
+      "exchange_warning": false
+    },
+    {
+      "id": "clean-fr-right-header",
+      "category": "clean",
+      "source_sha256": "5f86a9f2fe00e33b3fcc4c7407c8f2cb2a3f5fa7f92f3b8302cf207bbba9f001",
+      "exact": true,
+      "mismatches": [],
+      "exchange_warning": false
+    },
+    {
+      "id": "clean-gb-mono-plain",
+      "category": "clean",
+      "source_sha256": "5e33434870de6f39715e5e492c51e70cf9e6f975e8aa4f5288405cc3ec62d8b3",
+      "exact": true,
+      "mismatches": [],
+      "exchange_warning": false
+    },
+    {
+      "id": "clean-gb-serif",
+      "category": "clean",
+      "source_sha256": "750f8ed7d3358e1a1d56ae3510cc1ab22fb1bbe45e2fd8b2ff690616e1f0edb0",
+      "exact": true,
+      "mismatches": [],
+      "exchange_warning": false
+    },
+    {
+      "id": "clean-na-bulk-consumables",
+      "category": "clean",
+      "source_sha256": "1d8b9c0d7953993f5fbe7c83a4b19890c00220214254aa67ca086d1ee172e5ea",
+      "exact": true,
+      "mismatches": [],
+      "exchange_warning": false
+    },
+    {
+      "id": "clean-na-center-letterhead",
+      "category": "clean",
+      "source_sha256": "7136fd254b034d7c57898e1861a5530361b46752da694e7248e8217cce2ccfdc",
+      "exact": true,
+      "mismatches": [],
+      "exchange_warning": false
+    },
+    {
+      "id": "clean-nl-two-column",
+      "category": "clean",
+      "source_sha256": "a20969ab911caea9b4ae2a149317115132f8fb3e74364dae5bbd438c1f3dccdc",
+      "exact": true,
+      "mismatches": [],
+      "exchange_warning": false
+    },
+    {
+      "id": "clean-us-clean-simple",
+      "category": "clean",
+      "source_sha256": "6af9e34707a5b4f99d4a3df0eed3dee9c0d38a11ce5d365819cc4d56b3a95c9f",
+      "exact": true,
+      "mismatches": [],
+      "exchange_warning": false
+    },
+    {
+      "id": "clean-us-credit-applied",
+      "category": "clean",
+      "source_sha256": "b53a39af6fbb4d1a138f92e492945f612bec802d0f6634d7e4226a1ed4abbb3a",
+      "exact": true,
+      "mismatches": [],
+      "exchange_warning": false
+    },
+    {
+      "id": "clean-us-delivery-alias",
+      "category": "clean",
+      "source_sha256": "95324c0f70c7fec49d04b43123c5345eb9fece671fdb3093fdd62e9a457271e1",
+      "exact": true,
+      "mismatches": [],
+      "exchange_warning": false
+    },
+    {
+      "id": "clean-us-freight-alias",
+      "category": "clean",
+      "source_sha256": "fa31cfc926f25c64091ac839677640656e4963f8303ab1841c2eadcdc757aded",
+      "exact": true,
+      "mismatches": [],
+      "exchange_warning": false
+    },
+    {
+      "id": "clean-us-fuel-surcharge",
+      "category": "clean",
+      "source_sha256": "d5c4fa17d29f9fe9a6db5fccc7ebbe2b60c838d5dac9948858ff087cd44d80d0",
+      "exact": true,
+      "mismatches": [],
+      "exchange_warning": false
+    },
+    {
+      "id": "clean-us-handling-alias",
+      "category": "clean",
+      "source_sha256": "4b1c8b60b9d132a02188d83d1da3a91a576ef45d67593f518d80e93e0ef72843",
+      "exact": true,
+      "mismatches": [],
+      "exchange_warning": false
+    },
+    {
+      "id": "clean-us-landscape",
+      "category": "clean",
+      "source_sha256": "dc0258b41966b0fd8a70b68bce60fb33811d331ad639b5272a18e611e9756169",
+      "exact": true,
+      "mismatches": [],
+      "exchange_warning": false
+    },
+    {
+      "id": "clean-us-many-line-items",
+      "category": "clean",
+      "source_sha256": "7cdbde30960b039d6da7737642cfc29f7f9489057d5ce792da61d64cefbda0d3",
+      "exact": true,
+      "mismatches": [],
+      "exchange_warning": false
+    },
+    {
+      "id": "clean-us-net30-terms",
+      "category": "clean",
+      "source_sha256": "d2822118a071707ab201d9f4669c0c6795ea6a25d83cb1ef283b86bfb1fa90a8",
+      "exact": true,
+      "mismatches": [],
+      "exchange_warning": false
+    },
+    {
+      "id": "clean-us-overpaid-invoice",
+      "category": "clean",
+      "source_sha256": "c28d6c7f235de98cdf25a6ba11e004e8beace567727ff5532c91015906974a05",
+      "exact": true,
+      "mismatches": [],
+      "exchange_warning": false
+    },
+    {
+      "id": "clean-us-promo-code",
+      "category": "clean",
+      "source_sha256": "d4e10fb791d0d202b3bf4966ca8d065478dc12d910fb34b70497579392bb9e87",
+      "exact": true,
+      "mismatches": [],
+      "exchange_warning": false
+    },
+    {
+      "id": "clean-us-service-fee",
+      "category": "clean",
+      "source_sha256": "f73b6e09edea0322ab26cb021014729309a1fae3feb24944edc6689d3304eadc",
+      "exact": true,
+      "mismatches": [],
+      "exchange_warning": false
+    },
+    {
+      "id": "clean-us-sh-abbrev",
+      "category": "clean",
+      "source_sha256": "fecd17e7207efa4e64bae82cf43aac3aac52de9ca788a150f893ac9a8aee75fc",
+      "exact": true,
+      "mismatches": [],
+      "exchange_warning": false
+    },
+    {
+      "id": "clean-us-shipping-and-discount",
+      "category": "clean",
+      "source_sha256": "24807aeb1f5d395e27d94e3b613e1b0fe1060d475927c41953a32235296d7e9c",
+      "exact": true,
+      "mismatches": [],
+      "exchange_warning": false
+    },
+    {
+      "id": "clean-us-single-service",
+      "category": "clean",
+      "source_sha256": "8a11c0d5762cd9ef839eedf4f2a80d3e2012ec35a462dc3665e7f67dd3ecac9d",
+      "exact": true,
+      "mismatches": [],
+      "exchange_warning": false
+    },
+    {
+      "id": "clean-us-tax-only",
+      "category": "clean",
+      "source_sha256": "99d329d10b55379fa8b0121a1324c6ee5b65810b11d9a487b34aa7fa1ea7f7e9",
+      "exact": true,
+      "mismatches": [],
+      "exchange_warning": false
+    },
+    {
+      "id": "clean-us-trade-discount",
+      "category": "clean",
+      "source_sha256": "d59b1c6b791c1511e16f59625eb3f1ae744a2b80306520fac470182b329a5caa",
+      "exact": true,
+      "mismatches": [],
+      "exchange_warning": false
+    },
+    {
+      "id": "clean-us-two-tax-lines",
+      "category": "clean",
+      "source_sha256": "aa535379441e0f69e51aeaec4013944d7bc586f4439c74a5500ef8a9e1d58fdd",
+      "exact": true,
+      "mismatches": [],
+      "exchange_warning": false
+    },
+    {
+      "id": "clean-us-with-discount",
+      "category": "clean",
+      "source_sha256": "feba261f215a920c9f61a11b457d59a6fbc702488684765a7bfbae289cd4a789",
+      "exact": true,
+      "mismatches": [],
+      "exchange_warning": false
+    },
+    {
+      "id": "clean-us-with-shipping",
+      "category": "clean",
+      "source_sha256": "44a5eec150ca7271a49f6bfe24a5f97a5ecb50b1562cf36910379a33bfe3ebd0",
+      "exact": true,
+      "mismatches": [],
+      "exchange_warning": false
+    },
+    {
+      "id": "clean-us-zero-shipping-explicit",
+      "category": "clean",
+      "source_sha256": "d2892b69048c44948379ba182c85da4d600e7504782641ea040c17acb1baa3d4",
+      "exact": true,
+      "mismatches": [],
+      "exchange_warning": false
+    },
+    {
+      "id": "clean-za-band-space-groups",
+      "category": "clean",
+      "source_sha256": "61b18af366b98df5df6075e713142a535fc4b6b5583f39e771ae76be4618a7da",
+      "exact": true,
+      "mismatches": [],
+      "exchange_warning": false
+    },
+    {
+      "id": "clean-za-code-zebra",
+      "category": "clean",
+      "source_sha256": "1268631a5d4fa3e01edd61f4db12ac3d60871ca784a6d2d950c311c09066868e",
+      "exact": true,
+      "mismatches": [],
+      "exchange_warning": false
+    },
+    {
+      "id": "clean-zm-banner",
+      "category": "clean",
+      "source_sha256": "36741c587afed9747cd8ec9c7edc19c7d66e0ed8ad566f509d8a1bc004e6953f",
+      "exact": true,
+      "mismatches": [],
+      "exchange_warning": false
+    },
+    {
+      "id": "currency-dual-eur-nad-2",
+      "category": "currency",
+      "source_sha256": "3f4fb4a0cc9d6af94813429a3ecc4f7cc0329036ddb6383b1a48bd126e019527",
+      "exact": false,
+      "mismatches": [
+        {
+          "field": "taxable_total",
+          "actual": "3247.50",
+          "expected": "3247.51"
+        }
+      ],
+      "exchange_warning": true
+    },
+    {
+      "id": "currency-dual-usd-nad-4",
+      "category": "currency",
+      "source_sha256": "017c5e7f1c92bea132b75ac02034de5dd43fb4416f810cc50ca39f10daff2822",
+      "exact": true,
+      "mismatches": [],
+      "exchange_warning": false
+    },
+    {
+      "id": "currency-dual-usd-zar-1",
+      "category": "currency",
+      "source_sha256": "41ef18da7ad74c2ce87bbe4f6a4d03d63b793ac61c1d2026202ca4bfda23f7e3",
+      "exact": true,
+      "mismatches": [],
+      "exchange_warning": false
+    },
+    {
+      "id": "currency-dual-usd-zar-3",
+      "category": "currency",
+      "source_sha256": "d5338c9c4e726f0cb2cee8528b0247ba8801ed964c0e08c2f4faf9bac7818109",
+      "exact": true,
+      "mismatches": [],
+      "exchange_warning": false
+    },
+    {
+      "id": "currency-eur-1",
+      "category": "currency",
+      "source_sha256": "188ad7ef640b1d78477c5ba8d705e5b33f8293c61992b79fc8953edf06428dd6",
+      "exact": true,
+      "mismatches": [],
+      "exchange_warning": false
+    },
+    {
+      "id": "currency-eur-2",
+      "category": "currency",
+      "source_sha256": "65a3fa5c1044659a55ca2dd1ca952d005d945c970d3a9fb7d548b83e4c8d0762",
+      "exact": true,
+      "mismatches": [],
+      "exchange_warning": false
+    },
+    {
+      "id": "currency-gbp-1",
+      "category": "currency",
+      "source_sha256": "9fb5e128256f52dacbe723e73f32652345402607f6f921257d343f0cfb32b89f",
+      "exact": true,
+      "mismatches": [],
+      "exchange_warning": false
+    },
+    {
+      "id": "currency-gbp-2",
+      "category": "currency",
+      "source_sha256": "97282d67789e5e47b14585516ebdc38ba7ff825cd0015f6a58df822ca998a7dd",
+      "exact": true,
+      "mismatches": [],
+      "exchange_warning": false
+    },
+    {
+      "id": "currency-multi-line-nad",
+      "category": "currency",
+      "source_sha256": "070409c69c6d56321b3b0bde9c84d602d8a1ad24c23b8b9a475143a15b0fd707",
+      "exact": true,
+      "mismatches": [],
+      "exchange_warning": false
+    },
+    {
+      "id": "currency-multi-line-zar",
+      "category": "currency",
+      "source_sha256": "963c2013dcfa5127f90c63c8a5d326a33fd490b5cb239f3b6ba7d1e8e17c88a1",
+      "exact": true,
+      "mismatches": [],
+      "exchange_warning": false
+    },
+    {
+      "id": "currency-nad-1",
+      "category": "currency",
+      "source_sha256": "5b3208fe6e0150a4b7dc861ebacb8e123c719ba81a47915bb66fd295cd019b90",
+      "exact": true,
+      "mismatches": [],
+      "exchange_warning": false
+    },
+    {
+      "id": "currency-nad-2",
+      "category": "currency",
+      "source_sha256": "41fb6a8d22bbcf8062f9c0d2d264cf738734330c616570b255494d0e7a53c547",
+      "exact": true,
+      "mismatches": [],
+      "exchange_warning": false
+    },
+    {
+      "id": "currency-nad-bare-dollar",
+      "category": "currency",
+      "source_sha256": "f0d5c7acb307a593e9dfbdb64bfd5a7cf37bd18d9b0a515de1680e051e0841c1",
+      "exact": true,
+      "mismatches": [],
+      "exchange_warning": false
+    },
+    {
+      "id": "currency-usd-1",
+      "category": "currency",
+      "source_sha256": "562affb7534b797c49cf69db91192413edf9f87df5f21b667103f1c61ca7d135",
+      "exact": true,
+      "mismatches": [],
+      "exchange_warning": false
+    },
+    {
+      "id": "currency-usd-2",
+      "category": "currency",
+      "source_sha256": "faf7c1d3d811e324c802fdbede3476b236c137ca062796e3df50d1662b560d99",
+      "exact": true,
+      "mismatches": [],
+      "exchange_warning": false
+    },
+    {
+      "id": "currency-zar-1",
+      "category": "currency",
+      "source_sha256": "ed001f67fc2cf839f2ca1ac1bc5e02b0e917fbaa384a3cbb3c6038e7e9b7c15c",
+      "exact": true,
+      "mismatches": [],
+      "exchange_warning": false
+    },
+    {
+      "id": "currency-zar-2",
+      "category": "currency",
+      "source_sha256": "c43379e21b460e84dc2d3c605f2a21bb018b18d19e9f4adfc15a629031dcdcc5",
+      "exact": true,
+      "mismatches": [],
+      "exchange_warning": false
+    },
+    {
+      "id": "currency-zmw-1",
+      "category": "currency",
+      "source_sha256": "39a83a4b289a5afb6885ee49531092224f4cf268e250da64745311fa4c501274",
+      "exact": true,
+      "mismatches": [],
+      "exchange_warning": false
+    },
+    {
+      "id": "currency-zmw-2",
+      "category": "currency",
+      "source_sha256": "c3ef550012203d1c2f7b8700d31c9d5d818ae470fba31ee55ac3e836040a2cc8",
+      "exact": true,
+      "mismatches": [],
+      "exchange_warning": false
+    },
+    {
+      "id": "freight-carrier-na-5",
+      "category": "freight",
+      "source_sha256": "580f9445b960e9201d705029b5a73add16f0502b30ca33a0be2350570632b058",
+      "exact": true,
+      "mismatches": [],
+      "exchange_warning": false
+    },
+    {
+      "id": "freight-carrier-na-6",
+      "category": "freight",
+      "source_sha256": "fad2b8cd58be29b8d26fecb12a60b55168896f8058a35be4875e1e854d497a68",
+      "exact": true,
+      "mismatches": [],
+      "exchange_warning": false
+    },
+    {
+      "id": "freight-carrier-us-1",
+      "category": "freight",
+      "source_sha256": "7a4b6854b85b07b07954bbbd1e2905d6f5e057c89af73754bd6b4e050553cc55",
+      "exact": true,
+      "mismatches": [],
+      "exchange_warning": false
+    },
+    {
+      "id": "freight-carrier-us-2",
+      "category": "freight",
+      "source_sha256": "26689220e3ae200a102513e0b1c0c0ee5c10a68ddf4b471625cc46c61bcc17e3",
+      "exact": true,
+      "mismatches": [],
+      "exchange_warning": false
+    },
+    {
+      "id": "freight-carrier-za-3",
+      "category": "freight",
+      "source_sha256": "842fed6e98c29639de27274124cee4c3a3804f7212a4b802f1c08d3722e24692",
+      "exact": true,
+      "mismatches": [],
+      "exchange_warning": false
+    },
+    {
+      "id": "freight-carrier-za-4",
+      "category": "freight",
+      "source_sha256": "69ec979facc895317b8b812f37e9b0912f1b24aeae004774c6311220d246173b",
+      "exact": true,
+      "mismatches": [],
+      "exchange_warning": false
+    },
+    {
+      "id": "freight-clearing-na-1",
+      "category": "freight",
+      "source_sha256": "ff5576ebbdca5289552aec7fc57e66e76b68704a7a2a984380fd3409b61831ef",
+      "exact": true,
+      "mismatches": [],
+      "exchange_warning": false
+    },
+    {
+      "id": "freight-clearing-na-2",
+      "category": "freight",
+      "source_sha256": "570c0f722b25b0d44760c93b097fc6169dd99b618a43d137380141ef99f93110",
+      "exact": true,
+      "mismatches": [],
+      "exchange_warning": false
+    },
+    {
+      "id": "freight-clearing-na-3",
+      "category": "freight",
+      "source_sha256": "4fcca536457fd9a0bf7ab71791cc2e6c88bed1a7953d19011e4f3cc79d32a8ff",
+      "exact": true,
+      "mismatches": [],
+      "exchange_warning": false
+    },
+    {
+      "id": "freight-clearing-za-4",
+      "category": "freight",
+      "source_sha256": "bf65e81b9dfbe5f5df04fc64ae489ed26eea5b64c52dbeea1bccd372ad197dda",
+      "exact": true,
+      "mismatches": [],
+      "exchange_warning": false
+    },
+    {
+      "id": "freight-clearing-za-5",
+      "category": "freight",
+      "source_sha256": "cab26b7a07c1557ecca7976295a2ad45265daa9294fc86a22f1b4c21733ed6bd",
+      "exact": true,
+      "mismatches": [],
+      "exchange_warning": false
+    },
+    {
+      "id": "freight-clearing-za-6",
+      "category": "freight",
+      "source_sha256": "1149d958f83db4de928881c14c480efa30999fccf06b409b799b293aa102c691",
+      "exact": true,
+      "mismatches": [],
+      "exchange_warning": false
+    },
+    {
+      "id": "freight-trip-reference-1",
+      "category": "freight",
+      "source_sha256": "40d4ac9e63329e9aed1e93ddf98dd4091723ee1fe7a6a4dff9dd7d5d05c200cf",
+      "exact": true,
+      "mismatches": [],
+      "exchange_warning": false
+    },
+    {
+      "id": "freight-trip-reference-2",
+      "category": "freight",
+      "source_sha256": "9884790123e77568b8af6452dfdd15fd1c431c023bc685b613476dd076e22038",
+      "exact": true,
+      "mismatches": [],
+      "exchange_warning": false
+    },
+    {
+      "id": "freight-trip-reference-3",
+      "category": "freight",
+      "source_sha256": "5e76f6bfff2e8cbe5c13b03f6e6997ea37b851a7f79f7e47edb657cf03cb9158",
+      "exact": true,
+      "mismatches": [],
+      "exchange_warning": false
+    },
+    {
+      "id": "freight-trip-reference-4",
+      "category": "freight",
+      "source_sha256": "49f3f193cd745c552830e8e3d865a30a04c1f2a72aee793f1c1816680a7d8f69",
+      "exact": true,
+      "mismatches": [],
+      "exchange_warning": false
+    },
+    {
+      "id": "hard-lines-vs-subtotal",
+      "category": "hard",
+      "source_sha256": "c48940d3ead2428336cedc02ed540d6f1bd696ee7f04565a6fbdf0af0518e317",
+      "exact": true,
+      "mismatches": [],
+      "exchange_warning": false
+    },
+    {
+      "id": "hard-missing-invoice-number-1",
+      "category": "hard",
+      "source_sha256": "2d19eb5e3dc9a359224788fa9592df7f4186fd2479b54e1766c242867459d9dd",
+      "exact": true,
+      "mismatches": [],
+      "exchange_warning": false
+    },
+    {
+      "id": "hard-missing-invoice-number-2",
+      "category": "hard",
+      "source_sha256": "089782933f907ce7aedd0d1624d49ccdd552eb404a77498e9a30f90695ee2e6e",
+      "exact": true,
+      "mismatches": [],
+      "exchange_warning": false
+    },
+    {
+      "id": "hard-po-beside-invoice-number-1",
+      "category": "hard",
+      "source_sha256": "3d802ae5c5b37629ce121974362c84d59ebe9da6c40ea0a0cc047e7f5e9f693b",
+      "exact": true,
+      "mismatches": [],
+      "exchange_warning": false
+    },
+    {
+      "id": "hard-po-beside-invoice-number-2",
+      "category": "hard",
+      "source_sha256": "056d9599e6cc1240f7414924fb09fd8dab69f43b126f3e3db7ea7c7f7e5cc5be",
+      "exact": true,
+      "mismatches": [],
+      "exchange_warning": false
+    },
+    {
+      "id": "hard-po-beside-invoice-number-3",
+      "category": "hard",
+      "source_sha256": "e035c53e149f8df513a5f446b266254ace02403661ebbd2496ca206283de97f4",
+      "exact": true,
+      "mismatches": [],
+      "exchange_warning": false
+    },
+    {
+      "id": "hard-total-inflated",
+      "category": "hard",
+      "source_sha256": "02dada5910d8fc07782d58c3f11ba316e7c0d090912e50620bee2654b0ab9984",
+      "exact": true,
+      "mismatches": [],
+      "exchange_warning": false
+    },
+    {
+      "id": "hard-total-small-residual",
+      "category": "hard",
+      "source_sha256": "d8dd565d60ee183c107a4fc7fa3a73af902a896a65232d57e1d2a28e07a63b3f",
+      "exact": true,
+      "mismatches": [],
+      "exchange_warning": false
+    },
+    {
+      "id": "hard-wrong-vat-amount",
+      "category": "hard",
+      "source_sha256": "2fe5f4bdc39cbc20cd0c4af5267dc286f9e8ca16d63ae9f5f50175847248c1e2",
+      "exact": true,
+      "mismatches": [],
+      "exchange_warning": false
+    },
+    {
+      "id": "multipage-2p-us-2",
+      "category": "multipage",
+      "source_sha256": "b7c863905e815937916e71cbb14271ced4247f5ce8ac7bd0c72b0d99302dd4d6",
+      "exact": true,
+      "mismatches": [],
+      "exchange_warning": false
+    },
+    {
+      "id": "multipage-2p-za-1",
+      "category": "multipage",
+      "source_sha256": "ba1505760741842989d8efa2770a26ca66144ae07908212f88217c6df62d55b4",
+      "exact": true,
+      "mismatches": [],
+      "exchange_warning": false
+    },
+    {
+      "id": "multipage-3p-gb-4",
+      "category": "multipage",
+      "source_sha256": "5f96c4076df5124d8d424345f064cab46b0d6795e3feb30682817350e2a2a8d5",
+      "exact": true,
+      "mismatches": [],
+      "exchange_warning": false
+    },
+    {
+      "id": "multipage-3p-na-3",
+      "category": "multipage",
+      "source_sha256": "6c896e73b02dfed221d685ff318cefa670303343103497b278ea5704580793b4",
+      "exact": true,
+      "mismatches": [],
+      "exchange_warning": false
+    },
+    {
+      "id": "multipage-4p-za-5",
+      "category": "multipage",
+      "source_sha256": "5ff73677460a70120874279b4508971628389ae0c950d8632f5cd787937dccab",
+      "exact": true,
+      "mismatches": [],
+      "exchange_warning": false
+    },
+    {
+      "id": "multipage-5p-de-6",
+      "category": "multipage",
+      "source_sha256": "fdb379c5fc5814daf339b4308767c03f9ce80edae2ec4eda2f4cdb8059684aab",
+      "exact": true,
+      "mismatches": [],
+      "exchange_warning": false
+    },
+    {
+      "id": "multipage-5p-na-7",
+      "category": "multipage",
+      "source_sha256": "bfa25ca756ccfae57549eb95e783bf0805368a7bf4574400d40b29c2d9eef7e2",
+      "exact": true,
+      "mismatches": [],
+      "exchange_warning": false
+    },
+    {
+      "id": "multipage-6p-za-8",
+      "category": "multipage",
+      "source_sha256": "815782631063069cb4e3b7ea7c6bc0c6068a9a35045d5ba5e9208e9172ee5bda",
+      "exact": true,
+      "mismatches": [],
+      "exchange_warning": false
+    },
+    {
+      "id": "multipage-8p-na-10",
+      "category": "multipage",
+      "source_sha256": "e3783f513518c2693445a9899e8df6724eac6ff759482f301aaaeb5fe8210ffb",
+      "exact": true,
+      "mismatches": [],
+      "exchange_warning": false
+    },
+    {
+      "id": "multipage-8p-us-9",
+      "category": "multipage",
+      "source_sha256": "bfefcdac99f0a4ae7bfc39e6129a56fdf4b4283379df22805a326f4010f840a6",
+      "exact": true,
+      "mismatches": [],
+      "exchange_warning": false
+    },
+    {
+      "id": "tax-exclusive-vat-column-gb",
+      "category": "tax",
+      "source_sha256": "d0d02d0f7b76633ae1b12c0f5676ff1f78da3404ff098d23b0729f6dd3d1bb7d",
+      "exact": true,
+      "mismatches": [],
+      "exchange_warning": false
+    },
+    {
+      "id": "tax-exclusive-vat-column-za",
+      "category": "tax",
+      "source_sha256": "952b6d5f3d4361e39c701b57073094d42e3feb98b72df3a4417cdbc7598dfaa5",
+      "exact": true,
+      "mismatches": [],
+      "exchange_warning": false
+    },
+    {
+      "id": "tax-inclusive-subtotal-na",
+      "category": "tax",
+      "source_sha256": "cdab9d78123f5a5c78f52d1a621ea67e1b64219da7938b422e308e37c0f3e620",
+      "exact": true,
+      "mismatches": [],
+      "exchange_warning": false
+    },
+    {
+      "id": "tax-inclusive-total-na",
+      "category": "tax",
+      "source_sha256": "9040fcaca69b1a4a4eedc827b827b75e01ee4aba49c66530c8c39a9e6e8ce45e",
+      "exact": true,
+      "mismatches": [],
+      "exchange_warning": false
+    },
+    {
+      "id": "tax-inclusive-total-za",
+      "category": "tax",
+      "source_sha256": "beec9c383e196778162cda0c370e167d2d35e76254b46214cc8a17b4549ea143",
+      "exact": true,
+      "mismatches": [],
+      "exchange_warning": false
+    },
+    {
+      "id": "tax-percentage-line-1",
+      "category": "tax",
+      "source_sha256": "dd46ad7a54a971e5c3a338383e95302d5f1f1b8b339f614d31821987a03f84fc",
+      "exact": true,
+      "mismatches": [],
+      "exchange_warning": false
+    },
+    {
+      "id": "tax-percentage-line-2",
+      "category": "tax",
+      "source_sha256": "63b9319997239241d925fa2379a599ae1505e480b4944b73e344d0827a725472",
+      "exact": true,
+      "mismatches": [],
+      "exchange_warning": false
+    },
+    {
+      "id": "tax-sage-subtotal-after-vat-1",
+      "category": "tax",
+      "source_sha256": "ae2b9d4fcc703de52ed028791be02eb655bfd9041816b4455ca77376866089e6",
+      "exact": true,
+      "mismatches": [],
+      "exchange_warning": false
+    },
+    {
+      "id": "tax-sage-subtotal-after-vat-2",
+      "category": "tax",
+      "source_sha256": "45435828463af8be0f084a5cb7899c1da847d801d79deff190a23fba98335699",
+      "exact": true,
+      "mismatches": [],
+      "exchange_warning": false
+    },
+    {
+      "id": "tax-sage-subtotal-after-vat-3",
+      "category": "tax",
+      "source_sha256": "f66eca14f2b4b98cdcb3d51473bb20765038eaa2d21396b06db1c66b9b6f77ac",
+      "exact": true,
+      "mismatches": [],
+      "exchange_warning": false
+    },
+    {
+      "id": "tax-withholding-na",
+      "category": "tax",
+      "source_sha256": "2ab62b47752f1302ae12b41e2d057a0e5563283b6b35533e9df2ecc9178eaceb",
+      "exact": true,
+      "mismatches": [],
+      "exchange_warning": false
+    },
+    {
+      "id": "tax-withholding-zm",
+      "category": "tax",
+      "source_sha256": "73af891cce3bf3f3b2d48329cceaf1b4726ac9a4ff78da54fe23ef7c0bdfb5b6",
+      "exact": true,
+      "mismatches": [],
+      "exchange_warning": false
+    },
+    {
+      "id": "tax-zero-rated-na",
+      "category": "tax",
+      "source_sha256": "a6a699005e49dad94217a505c67691257f4a6091035aa35a5622bc0bc55a8d04",
+      "exact": true,
+      "mismatches": [],
+      "exchange_warning": false
+    },
+    {
+      "id": "tax-zero-rated-za",
+      "category": "tax",
+      "source_sha256": "9b69a6db2c2d9f92c8d2b9d9d997a6324edc56e45e67761d73a6489047945715",
+      "exact": true,
+      "mismatches": [],
+      "exchange_warning": false
+    },
+    {
+      "id": "scan-fax-mild",
+      "category": "scan",
+      "source_sha256": "52bddd0fea025c24d46c14cd28b9ed742e4a87df260907991d703422808c30c2",
+      "exact": true,
+      "mismatches": [],
+      "exchange_warning": false
+    }
+  ]
+}
