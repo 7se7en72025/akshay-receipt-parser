@@ -16,6 +16,7 @@ from pathlib import Path
 import httpx
 
 ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(ROOT))
 AI_HOME = Path(os.environ.get("AKSHAY_AI_HOME", "D:/KyvernoBuild/akshay-local-ai")).resolve()
 URL = "http://127.0.0.1:18092"
 
