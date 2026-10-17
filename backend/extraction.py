@@ -95,6 +95,7 @@ def column_field(parent, child, discount_index):
         "product",
         "productname",
         "itemname",
+        "item",
         "goodsdescription",
         "descriptionofitems",
     }:
@@ -285,9 +286,12 @@ def ocr_page(image):
                 "text": record["text"],
                 "x0": record["x"],
                 "x1": record["x1"],
-                "top": record["y"] - record["height"] / 2,
+                # Reuse the OCR baseline grouping. Individual glyph heights
+                # must not split a single table heading into several lines.
+                "top": line["y"],
             }
-            for record in records
+            for line in lines
+            for record in line["tokens"]
         ]
     )
     return text, layout_tables or ([table] if table else []), records

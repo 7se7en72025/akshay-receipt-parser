@@ -44,6 +44,8 @@ def currency_value(text, default="INR"):
     for pattern, code in [
         (r"\bINR\b|₹|\bRs\.?", "INR"),
         (r"\bUSD\b|US\$", "USD"),
+        (r"\bCAD\b|CA\$", "CAD"),
+        (r"\bAUD\b|AU\$", "AUD"),
         (r"\bEUR\b|€", "EUR"),
         (r"\bGBP\b|£", "GBP"),
         (r"\bNAD\b|N\$", "NAD"),
@@ -61,6 +63,8 @@ def currency_value(text, default="INR"):
         return "EUR"
     if "$" in text and ("Sales Tax" in text or re.search(r"\b[A-Z]{2} \d{5}\b", text)):
         return "USD"
+    if "$" in text:
+        return "UNK"  # Never silently approve ambiguous dollar amounts as INR.
     return default
 
 
@@ -75,13 +79,23 @@ def generic_fields(text):
     us = bool(re.search(r"\b[A-Z]{2} \d{5}\b|\bEIN\s*:|Sales Tax", source))
     header = re.split(r"\bBILL TO\b|\bDescription\b", source, maxsplit=1, flags=re.I)[0]
     if lines:
-        candidate = re.sub(r"\b(?:TAX\s+)?INVOICE\b.*$", "", lines[0], flags=re.I).strip()
+        first_line = re.split(r"\s{2,}", lines[0])[0]
+        candidate = re.sub(r"\b(?:TAX\s+)?INVOICE\b.*$", "", first_line, flags=re.I).strip()
         if not candidate:
             candidate = re.sub(r"^(?:TAX\s+)?INVOICE\s*", "", lines[0], flags=re.I).strip()
         if not candidate and len(lines) > 1:
             candidate = lines[1]
         if candidate and not re.search(r"Invoice\s*(?:No|Number|#)|^Date\s*:", candidate, re.I):
+            if len(lines) > 1 and re.fullmatch(
+                r"(?:Ltd\.?|Limited|LLC|Inc\.?|GmbH|PLC)", lines[1], re.I
+            ):
+                candidate += " " + lines[1]
             data["supplier_name"] = candidate
+    seller_statement = re.search(
+        r"This order is subject to\s+(.+?)\s+Terms of Service", source, re.I
+    )
+    if seller_statement:
+        data["supplier_name"] = seller_statement[1].strip()
     identifier = re.search(
         r"(?<!Supplier )\b(?:Invoice|Document)\s*(?:Number\b|No\b\.?|#)\s*[:#.]?\s*([A-Z0-9][A-Z0-9/._-]*)",
         header,
@@ -89,6 +103,12 @@ def generic_fields(text):
     )
     if not identifier:
         identifier = re.search(r"\bOur Reference\s*:\s*([A-Z0-9]*INV[A-Z0-9/._-]*)", header, re.I)
+    if not identifier:
+        identifier = re.search(
+            r"\b(?:Receipt|Order)\s*(?:(?:Number|No)\b\.?)?\s*[:#]\s*([A-Z0-9][A-Z0-9/._-]*)",
+            header,
+            re.I,
+        )
     if identifier:
         data["bill_number"] = identifier[1]
     for line in header.splitlines():
@@ -100,6 +120,13 @@ def generic_fields(text):
         if match:
             data["bill_date"] = date_value(match[1], us)
             break
+        if not re.search(r"\bDue\b", line, re.I):
+            named = re.search(
+                r"\b(\d{1,2}\s+[A-Za-z]+\s+\d{4}|[A-Za-z]+\s+\d{1,2},\s*\d{4})\b", line
+            )
+            if named and date_value(named[1], us):
+                data["bill_date"] = date_value(named[1], us)
+                break
     data["currency"] = currency_value(source)
     totals = []
     taxes = []
@@ -151,6 +178,16 @@ def generic_fields(text):
             )
     if taxes:
         data["other_tax_total"] = sum(taxes, Decimal(0))
+    # OCR can join neighboring footer columns into one line. Read only explicit
+    # labelled amounts; never take a tax-analysis row as a new invoice total.
+    amount_pattern = r"\s*:?\s*(?:[A-Z]{3}\s*|[$€£₹�]\s*)?(-?\d[\d ,]*(?:\.\d{1,4})?)\s*(?=\n|$|  )"
+    for field, label in (
+        ("taxable_total", r"\bNET\s+TOTAL"),
+        ("other_tax_total", r"\b(?:VAT\s+TOTAL|TOTAL\s+TAX)"),
+    ):
+        matches = re.findall(label + amount_pattern, source, re.I)
+        if matches and number(matches[-1]) is not None:
+            data[field] = number(matches[-1])
     if charges:
         data["charges_total"] = sum(charges, Decimal(0))
     if discounts:
@@ -162,6 +199,16 @@ def generic_fields(text):
         payable_currency = currency_value(payable_line, default=None)
         if payable_currency:
             data["currency"] = payable_currency
+    elif data.get("currency"):
+        match = re.search(
+            r"\b" + re.escape(data["currency"]) + r"\s+TOTAL" + amount_pattern, source, re.I
+        )
+        if match:
+            data["grand_total"] = number(match[1])
+    if data.get("grand_total") is None:
+        paid = re.search(r"[$€£₹�]\s*(\d[\d,]*(?:\.\d{2}))\s+paid\s+by\b", source, re.I)
+        if paid:
+            data["grand_total"] = number(paid[1])
     exchange = re.search(r"Exchange rate\s*:\s*1\s+([A-Z]{3})\s*=\s*([\d.]+)\s+([A-Z]{3})", source)
     if exchange and exchange[3] == data["currency"] and data.get("taxable_total") is not None:
         data["secondary_currency"] = exchange[1]
@@ -214,7 +261,18 @@ def borderless_tables(words):
     """Map source word boxes to table columns, retaining wrapped descriptions."""
     tables, columns, rows = [], [], []
     for line in word_lines(words):
-        names = [word["text"].lower().strip(".:#") for word in line]
+        aliases = {
+            "item": "description",
+            "item description": "description",
+            "product": "description",
+            "unit price": "rate",
+            "unitprice": "rate",
+            "value": "amount",
+        }
+        names = [
+            aliases.get(word["text"].lower().strip(".:#"), word["text"].lower().strip(".:#"))
+            for word in line
+        ]
         if "description" in names and (
             any(name in {"qty", "quantity"} for name in names) or "ccy" in names
         ):
@@ -230,6 +288,7 @@ def borderless_tables(words):
                     "qty",
                     "quantity",
                     "price",
+                    "rate",
                     "rate",
                     "amount",
                     "total",
@@ -260,8 +319,9 @@ def borderless_tables(words):
                                 "incl",
                                 "%",
                                 "/",
-                                "value",
-                            }:
+                            } or (
+                                following["text"].lower() == "value" and name in {"vat", "amount"}
+                            ):
                                 end = following["x1"]
                                 if name == "amount" and following["text"].upper() in {
                                     "USD",
@@ -324,6 +384,28 @@ def borderless_tables(words):
         ):
             rows.append(cells)
         elif len(rows) > 1 and any(cells) and not any(cells[index] for index in numeric_columns):
+            # Thermal receipts print a separate '@ 3.75 each' continuation.
+            # Preserve that explicit rate without mixing it into the item name.
+            rate = re.fullmatch(r"@\s*(?:[$€£₹�]\s*)?(\d[\d,.]*)\s+each", joined, re.I)
+            if rate and number(rate[1]) is not None:
+                rate_column = next(
+                    (i for i, column in enumerate(columns) if column["name"] == "rate"), None
+                )
+                if rate_column is None:
+                    columns.append(
+                        {
+                            "name": "rate",
+                            "start": columns[-1]["end"] + 10,
+                            "end": columns[-1]["end"] + 20,
+                        }
+                    )
+                    rows[0].append("rate")
+                    for row in rows[1:]:
+                        row.append("")
+                    rate_column = len(columns) - 1
+                if not rows[-1][rate_column]:
+                    rows[-1][rate_column] = rate[1]
+                continue
             description = next(
                 (i for i, column in enumerate(columns) if column["name"] == "description"), None
             )
