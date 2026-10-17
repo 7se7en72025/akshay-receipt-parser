@@ -31,7 +31,7 @@ def parse_date(value):
 def header_fields(text):
     data = {}
     match = re.search(
-        r"(?:bill|invoice)\s*(?:no\b\.?|number\b|#)\s*:?\s*([A-Z0-9][A-Z0-9./_-]+)",
+        r"(?:bill|invoice)[^\S\n]*(?:no\b\.?|number\b|#)[^\S\n]*:?[^\S\n]*([A-Z0-9][A-Z0-9./_-]+)",
         text,
         re.I,
     )
@@ -96,13 +96,15 @@ def column_field(parent, child, discount_index):
         "productname",
         "itemname",
         "item",
+        "descriptionofwork",
+        "workdescription",
         "goodsdescription",
         "descriptionofitems",
     }:
         return "description"
     if name.startswith("hsn"):
         return "hsn"
-    if name in {"qty", "quantity", "nos", "qnty", "qtyunit", "qtyvalue"}:
+    if name in {"qty", "quantity", "nos", "qnty", "qtyunit", "qtyvalue", "hours"}:
         return "quantity"
     if name in {"unit", "uom", "units"}:
         return "unit"
@@ -186,6 +188,8 @@ def table_items(rows, page_number):
                     values["quantity"] = number(qty[1])
                     if qty[2]:
                         values["unit"] = qty[2]
+                    elif clean(parents[index]) == "hours":
+                        values["unit"] = "Hours"
             elif field in {"description", "hsn", "unit"}:
                 values[field] = value
             else:
@@ -211,6 +215,42 @@ def table_items(rows, page_number):
             except ValidationError as error:
                 # Keep every valid field. One invalid number must not erase the
                 # other correctly extracted entries on this row.
+                invalid = {entry["loc"][0] for entry in error.errors()}
+                result.append(
+                    Item.model_validate(
+                        {key: value for key, value in values.items() if key not in invalid}
+                    )
+                )
+    return result
+
+
+def inline_quantity_items(text, page_number):
+    """Read explicit quantity-times-description-price rows in order summaries.
+
+    No rate is calculated from an amount. Ambiguous unlabelled prose is ignored.
+    """
+    if not re.search(r"\bOrder\s+(?:Summary|Confirmation)\b", text, re.I):
+        return []
+    result = []
+    pattern = re.compile(
+        r"(?:^|\s{2,})(\d+(?:[.,]\d+)?)[ \t]+[x×�][ \t]*(.+?)[ \t]{2,}(?:US\$|CA\$|AU\$|C\$|A\$|[$€£₹�])?[ \t]*(-?\d[\d,]*(?:\.\d{2})?)[ \t]*$",
+        re.I,
+    )
+    for line in text.splitlines():
+        match = pattern.search(line)
+        if not match:
+            continue
+        quantity, amount = number(match[1]), number(match[3])
+        if quantity is not None and quantity >= 0 and amount is not None:
+            values = {
+                "description": match[2].strip(),
+                "quantity": quantity,
+                "taxable_amount": amount,
+                "source_page": page_number,
+            }
+            try:
+                result.append(Item.model_validate(values))
+            except ValidationError as error:
                 invalid = {entry["loc"][0] for entry in error.errors()}
                 result.append(
                     Item.model_validate(
@@ -343,9 +383,15 @@ def extract_document(path: Path, mime: str):
                 else:
                     methods.add("pdf")
                 texts.append(f"--- PAGE {page_index + 1} ---\n{page_text}")
+                page_items = []
                 for raw_table in page_tables:
                     tables.append({"page": page_index + 1, "rows": raw_table})
-                    items.extend(table_items(raw_table, page_index + 1))
+                    page_items.extend(table_items(raw_table, page_index + 1))
+                if not page_items:
+                    page_items = inline_quantity_items(page_text, page_index + 1)
+                    if page_items:
+                        methods.add("inline-layout")
+                items.extend(page_items)
     else:
         with Image.open(path) as image:
             page_text, page_tables, _ = ocr_page(image)
@@ -354,6 +400,10 @@ def extract_document(path: Path, mime: str):
         for raw_table in page_tables:
             tables.append({"page": 1, "rows": raw_table})
             items.extend(table_items(raw_table, 1))
+        if not items:
+            items = inline_quantity_items(page_text, 1)
+            if items:
+                methods.add("inline-layout")
     raw_text = "\n\n".join(texts)
     fields = generic_fields(raw_text)
     if vendor:
@@ -397,6 +447,10 @@ def extract_document(path: Path, mime: str):
         )
     if "ocr" in methods:
         notes.append("OCR was used. Check descriptions, decimal points and reconstructed columns.")
+    if "inline-layout" in methods:
+        notes.append(
+            "Quantity-times-description rows were read without table headings. Unit rates are left blank unless printed separately; review these rows against the original."
+        )
     if any(item.discount_1 is not None or item.discount_2 is not None for item in items):
         notes.append(
             "Discount columns are retained as printed; their conventions need staff confirmation."

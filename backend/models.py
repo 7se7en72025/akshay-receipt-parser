@@ -129,8 +129,13 @@ def number(value) -> Decimal | None:
     if value is None:
         return None
     text = str(value).strip()
-    text = re.sub(r"^(?:INR|USD|EUR|GBP|NAD|ZAR|ZMW|US\$|N\$|R|K|[$₹£€])\s*", "", text, flags=re.I)
-    text = re.sub(r"\s*(?:INR|USD|EUR|GBP|NAD|ZAR|ZMW|[$₹£€%])$", "", text, flags=re.I)
+    text = re.sub(
+        r"^(?:INR|USD|CAD|AUD|EUR|GBP|NAD|ZAR|ZMW|US\$|CA\$|AU\$|C\$|A\$|N\$|R|K|[$₹£€])\s*",
+        "",
+        text,
+        flags=re.I,
+    )
+    text = re.sub(r"\s*(?:INR|USD|CAD|AUD|EUR|GBP|NAD|ZAR|ZMW|[$₹£€%])$", "", text, flags=re.I)
     text = re.sub(r"\s+", "", text)
     if "," in text and "." in text:
         text = (

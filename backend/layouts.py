@@ -96,8 +96,11 @@ def generic_fields(text):
     )
     if seller_statement:
         data["supplier_name"] = seller_statement[1].strip()
+    payee = re.search(r"Make\s+checks\s+payable\s+to\s*:\s*([^\n]+)", source, re.I)
+    if payee:
+        data["supplier_name"] = payee[1].strip()
     identifier = re.search(
-        r"(?<!Supplier )\b(?:Invoice|Document)\s*(?:Number\b|No\b\.?|#)\s*[:#.]?\s*([A-Z0-9][A-Z0-9/._-]*)",
+        r"(?<!Supplier )\b(?:Invoice|Document)[^\S\n]*(?:Number\b|No\b\.?|#)[^\S\n]*[:#.]?[^\S\n]*([A-Z0-9][A-Z0-9/._-]*)",
         header,
         re.I,
     )
@@ -111,7 +114,17 @@ def generic_fields(text):
         )
     if identifier:
         data["bill_number"] = identifier[1]
-    for line in header.splitlines():
+    elif re.search(r"\bINVOICE\s*(?:NO\.?|NUMBER|#)", header, re.I):
+        candidates = set(re.findall(r"\bINV[-/][A-Z0-9._/-]*\d[A-Z0-9._/-]*\b", header, re.I))
+        if len(candidates) == 1:
+            data["bill_number"] = candidates.pop()
+    header_lines = header.splitlines()
+    for index, line in enumerate(header_lines):
+        if re.fullmatch(r"DATE", line.strip(), re.I) and index + 1 < len(header_lines):
+            following = re.search(r"\b(\d{1,4}[-/.]\d{1,2}[-/.]\d{2,4})\b", header_lines[index + 1])
+            if following and date_value(following[1], us):
+                data["bill_date"] = date_value(following[1], us)
+                break
         match = re.search(
             r"(?<!Due )\bDate\s*:\s*(\d{1,4}[-/.]\w{1,9}[-/.]\d{2,4}|\d{1,2}\s+[A-Za-z]+\s+\d{4}|[A-Za-z]+\s+\d{1,2},\s*\d{4})",
             line,
@@ -147,7 +160,7 @@ def generic_fields(text):
         elif (
             footer
             and re.match(
-                r"(?:Total\s+)?(?:VAT|MwSt|TVA|BTW|(?:[A-Za-z]+\s+){0,3}(?:Sales Tax|State Tax|Local Tax|County Tax))\b",
+                r"(?:Total\s+)?(?:VAT|MwSt|TVA|BTW|Tax|(?:[A-Za-z]+\s+){0,3}(?:Sales Tax|State Tax|Local Tax|County Tax))\b",
                 label,
                 re.I,
             )
@@ -155,7 +168,11 @@ def generic_fields(text):
                 r"(?:VAT|TVA|BTW)[\s:-]*(?:Reg|No|ID|Number|Registration|nr|FR\d|NL\d)", label, re.I
             )
         ):
-            taxes.append(amount)
+            if not (
+                re.match(r"(?:Total\s+)?Tax\b", label, re.I)
+                and re.search(r"\b(?:CGST|SGST|IGST|CESS)\b", source, re.I)
+            ):
+                taxes.append(amount)
         elif re.match(
             r"(?:Shipping|Freight|Delivery Charge|Handling Charge|S&H|Service Charge|Fuel Surcharge)\b",
             label,
@@ -176,6 +193,11 @@ def generic_fields(text):
             totals.append(
                 (3 if re.search(r"PAYABLE|Balance Due", label, re.I) else 1, amount, line)
             )
+        elif footer and not re.match(
+            r"(?:Sub\s*Total|Net\s+Total|VAT\s+Total|Total\s+Tax)", label, re.I
+        ):
+            if re.search(r"\bTOTAL\s+(?:US\$|CA\$|AU\$|C\$|A\$|[$€£₹�])", label, re.I):
+                totals.append((1, amount, line))
     if taxes:
         data["other_tax_total"] = sum(taxes, Decimal(0))
     # OCR can join neighboring footer columns into one line. Read only explicit
@@ -185,6 +207,8 @@ def generic_fields(text):
         ("taxable_total", r"\bNET\s+TOTAL"),
         ("other_tax_total", r"\b(?:VAT\s+TOTAL|TOTAL\s+TAX)"),
     ):
+        if field == "other_tax_total" and re.search(r"\b(?:CGST|SGST|IGST|CESS)\b", source, re.I):
+            continue
         matches = re.findall(label + amount_pattern, source, re.I)
         if matches and number(matches[-1]) is not None:
             data[field] = number(matches[-1])
@@ -268,6 +292,9 @@ def borderless_tables(words):
             "unit price": "rate",
             "unitprice": "rate",
             "value": "amount",
+            "description of work": "description",
+            "descriptionofwork": "description",
+            "hours": "quantity",
         }
         names = [
             aliases.get(word["text"].lower().strip(".:#"), word["text"].lower().strip(".:#"))
@@ -286,6 +313,7 @@ def borderless_tables(words):
                     continue
                 if name in {
                     "description",
+                    "date",
                     "code",
                     "hsn",
                     "qty",
@@ -356,7 +384,7 @@ def borderless_tables(words):
         numeric_columns = [
             index
             for index, column in enumerate(columns)
-            if column["name"] not in {"code", "description", "hsn", "ccy"}
+            if column["name"] not in {"code", "description", "hsn", "ccy", "date"}
         ]
         if len(numeric_columns) < 2:
             continue
