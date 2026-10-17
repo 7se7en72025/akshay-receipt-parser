@@ -56,9 +56,7 @@ def initialize():
         PRAGMA user_version=1;
         """)
         # This is a single-process local workspace. Recover interrupted jobs on startup.
-        db.execute(
-            "UPDATE documents SET status='queued', error=NULL WHERE status='processing'"
-        )
+        db.execute("UPDATE documents SET status='queued', error=NULL WHERE status='processing'")
 
 
 def decode(row):
@@ -66,7 +64,8 @@ def decode(row):
         return None
     data = dict(row)
     for key, target in [
-        ("invoice_json", "invoice"), ("raw_tables", "raw_tables"),
+        ("invoice_json", "invoice"),
+        ("raw_tables", "raw_tables"),
         ("extraction_notes", "extraction_notes"),
     ]:
         if key in data:

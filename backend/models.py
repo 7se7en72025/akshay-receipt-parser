@@ -33,9 +33,18 @@ class Item(BaseModel):
     @classmethod
     def empty_numbers(cls, value, info):
         numeric = {
-            "quantity", "unit_price", "discount_1", "discount_2", "taxable_amount",
-            "sgst_rate", "sgst_amount", "cgst_rate", "cgst_amount", "igst_rate",
-            "igst_amount", "cess_amount",
+            "quantity",
+            "unit_price",
+            "discount_1",
+            "discount_2",
+            "taxable_amount",
+            "sgst_rate",
+            "sgst_amount",
+            "cgst_rate",
+            "cgst_amount",
+            "igst_rate",
+            "igst_amount",
+            "cess_amount",
         }
         if info.field_name in numeric and value == "":
             return None
@@ -62,8 +71,15 @@ class Invoice(BaseModel):
     notes: str = Field(default="", max_length=4000)
 
     @field_validator(
-        "bill_date", "taxable_total", "sgst_total", "cgst_total",
-        "igst_total", "cess_total", "round_off", "grand_total", mode="before"
+        "bill_date",
+        "taxable_total",
+        "sgst_total",
+        "cgst_total",
+        "igst_total",
+        "cess_total",
+        "round_off",
+        "grand_total",
+        mode="before",
     )
     @classmethod
     def empty_to_none(cls, value):
