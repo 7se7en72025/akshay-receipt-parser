@@ -4,6 +4,7 @@ import {
   ArrowRight,
   Check,
   CheckCheck,
+  ChevronLeft,
   ChevronRight,
   CircleHelp,
   FileCheck2,
@@ -25,12 +26,32 @@ import { api, day, message, money } from "./api";
 import { Loading, Modal, Status } from "./components";
 import { Review } from "./Review";
 import { Templates } from "./Templates";
-import type { Document, ExportRecord, Health, Template } from "./types";
+import type {
+  Document,
+  DocumentSummary,
+  InboxPage,
+  UploadResult,
+  ExportRecord,
+  Health,
+  Template,
+} from "./types";
+import { UploadReport } from "./UploadReport";
 
 type View = "invoices" | "templates" | "exports";
 export default function App() {
   const [view, setView] = useState<View>("invoices");
-  const [documents, setDocuments] = useState<Document[]>([]);
+  const [documents, setDocuments] = useState<DocumentSummary[]>([]);
+  const [reviewQueue, setReviewQueue] = useState<DocumentSummary[]>([]);
+  const [inbox, setInbox] = useState<InboxPage | null>(null);
+  const [page, setPage] = useState(1);
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
+  const [order, setOrder] = useState("newest");
+  const [query, setQuery] = useState("");
+  const [uploadResult, setUploadResult] = useState<UploadResult | null>(null);
+  const [showUploads, setShowUploads] = useState(false);
+  const refreshSequence = useRef(0);
+  const inFlight = useRef<string | null>(null);
   const [health, setHealth] = useState<Health | null>(null);
   const [templates, setTemplates] = useState<Template[]>([]);
   const [exports, setExports] = useState<ExportRecord[]>([]);
@@ -46,6 +67,13 @@ export default function App() {
   activeRef.current = active;
   const [filter, setFilter] = useState("all");
   const [search, setSearch] = useState("");
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setQuery(search);
+      setPage(1);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [search]);
   const [selected, setSelected] = useState<string[]>([]);
   const [dragging, setDragging] = useState(false);
   const [help, setHelp] = useState(false);
@@ -59,16 +87,47 @@ export default function App() {
     [],
   );
   const refresh = useCallback(async () => {
+    if (dateFrom && dateTo && dateFrom > dateTo) {
+      setLoading(false);
+      return;
+    }
+    const params = new URLSearchParams({
+      search: query,
+      status: filter,
+      page: String(page),
+      order,
+      ...(dateFrom ? { date_from: dateFrom } : {}),
+      ...(dateTo ? { date_to: dateTo } : {}),
+    });
+    const key = params.toString();
+    if (inFlight.current === key) return;
+    inFlight.current = key;
+    const sequence = ++refreshSequence.current;
     try {
-      const docs = await api<Document[]>("/documents");
-      setDocuments(docs);
+      const result = await api<InboxPage>("/inbox?" + params);
+      if (sequence !== refreshSequence.current) return;
+      setDocuments(result.items);
+      setInbox(result);
+      if (result.page !== page) setPage(result.page);
+      setSelected((current) =>
+        current.filter(
+          (id) =>
+            !result.items.some(
+              (doc) => doc.id === id && doc.status !== "approved",
+            ),
+        ),
+      );
       setConnectionError("");
     } catch (error) {
-      setConnectionError(message(error));
+      if (sequence === refreshSequence.current)
+        setConnectionError(message(error));
     } finally {
-      setLoading(false);
+      if (sequence === refreshSequence.current) {
+        inFlight.current = null;
+        setLoading(false);
+      }
     }
-  }, []);
+  }, [query, filter, page, dateFrom, dateTo, order]);
   const refreshTemplates = useCallback(async () => {
     try {
       setTemplates(await api<Template[]>("/templates"));
@@ -84,12 +143,15 @@ export default function App() {
     }
   }, [notify]);
   useEffect(() => {
-    void refresh();
     void refreshTemplates();
     void refreshExports();
     void api<Health>("/health")
       .then(setHealth)
       .catch(() => {});
+  }, [refreshTemplates, refreshExports]);
+  useEffect(() => {
+    setLoading(true);
+    void refresh();
     const timer = setInterval(() => {
       void refresh();
       const doc = activeRef.current;
@@ -101,8 +163,12 @@ export default function App() {
           .catch(() => {});
       }
     }, 2500);
-    return () => clearInterval(timer);
-  }, [refresh, refreshTemplates, refreshExports]);
+    return () => {
+      clearInterval(timer);
+      refreshSequence.current++;
+      inFlight.current = null;
+    };
+  }, [refresh]);
   useEffect(() => {
     if (!toast) return;
     const timer = setTimeout(() => setToast(null), 7000);
@@ -137,6 +203,18 @@ export default function App() {
         "Choose 1–12 non-empty files, up to 15 MB each and 60 MB in total.",
         true,
       );
+      setUploadResult({
+        created: [],
+        duplicates: [],
+        errors: [
+          {
+            filename: "Batch upload",
+            message:
+              "Choose 1–12 non-empty files, up to 15 MB each and 60 MB in total.",
+          },
+        ],
+      });
+      setShowUploads(true);
       if (input.current) input.current.value = "";
       return;
     }
@@ -145,11 +223,12 @@ export default function App() {
     Array.from(files).forEach((file) => form.append("files", file));
     form.append("use_ai", String(useAi));
     try {
-      const result = await api<{
-        created: { id: string; filename: string }[];
-        duplicates: { id: string; filename: string }[];
-        errors: { filename: string; message: string }[];
-      }>("/documents", { method: "POST", body: form });
+      const result = await api<UploadResult>("/documents", {
+        method: "POST",
+        body: form,
+      });
+      setUploadResult(result);
+      setShowUploads(result.errors.length > 0 || result.created.length !== 1);
       await refresh();
       const pieces = [];
       if (result.created.length)
@@ -168,41 +247,43 @@ export default function App() {
         setActiveId(result.duplicates[0].id);
       setView("invoices");
     } catch (error) {
+      setUploadResult({
+        created: [],
+        duplicates: [],
+        errors: [{ filename: "Batch upload", message: message(error) }],
+      });
+      setShowUploads(true);
       notify(message(error), true);
     } finally {
       setUploading(false);
       if (input.current) input.current.value = "";
     }
   }
-  const pending = documents.filter(
-    (doc) => doc.status === "needs_review" || doc.status === "failed",
-  );
-  const approved = documents.filter((doc) => doc.status === "approved");
-  const processing = documents.filter((doc) =>
-    ["queued", "processing"].includes(doc.status),
-  );
-  const approvedIds = new Set(approved.map((doc) => doc.id));
-  const exportIds = selected.filter((id) => approvedIds.has(id));
-  const filtered = documents.filter((doc) => {
-    const matches =
-      filter === "all" ||
-      (filter === "review" && pending.includes(doc)) ||
-      (filter === "approved" && doc.status === "approved") ||
-      (filter === "processing" &&
-        ["queued", "processing"].includes(doc.status));
-    return (
-      matches &&
-      (
-        doc.filename +
-        " " +
-        doc.invoice.supplier_name +
-        " " +
-        doc.invoice.bill_number
-      )
-        .toLowerCase()
-        .includes(search.toLowerCase())
-    );
-  });
+  const counts = inbox?.counts ?? {
+    all: 0,
+    review: 0,
+    approved: 0,
+    processing: 0,
+  };
+  const exportIds = selected;
+  const filtered = documents;
+  const queue = reviewQueue.some((doc) => doc.id === activeId)
+    ? reviewQueue
+    : documents;
+  const activeIndex = queue.findIndex((doc) => doc.id === activeId);
+  function openBill(id: string) {
+    if (
+      hasUnsavedChanges &&
+      !window.confirm("Leave without saving your changes?")
+    )
+      return;
+    setHasUnsavedChanges(false);
+    setView("invoices");
+    if (!activeId || !reviewQueue.some((doc) => doc.id === id))
+      setReviewQueue(documents);
+    setActiveId(id);
+    setShowUploads(false);
+  }
   function nav(next: View) {
     if (
       hasUnsavedChanges &&
@@ -212,8 +293,13 @@ export default function App() {
     setHasUnsavedChanges(false);
     setView(next);
     setActiveId(null);
+    setReviewQueue([]);
   }
   function openExport(ids: string[]) {
+    if (ids.length > 200) {
+      notify("Select up to 200 bills per workbook.", true);
+      return;
+    }
     setExporting(ids);
   }
 
@@ -243,7 +329,7 @@ export default function App() {
             onClick={() => nav("invoices")}
           >
             <Inbox size={18} />
-            Invoices <span className="nav-count">{documents.length}</span>
+            Invoices <span className="nav-count">{inbox?.total ?? 0}</span>
           </button>
           <button
             className={view === "templates" ? "active" : ""}
@@ -295,6 +381,17 @@ export default function App() {
                   : "Export history"}
           </strong>
           <span className="topbar-right">
+            {uploadResult && (
+              <button
+                className="text-button upload-report-button"
+                onClick={() => setShowUploads(true)}
+              >
+                Last upload
+                {uploadResult.errors.length
+                  ? ` · ${uploadResult.errors.length} issues`
+                  : ""}
+              </button>
+            )}
             <span className="local-pill">
               <HardDrive size={12} /> Local
             </span>
@@ -303,7 +400,7 @@ export default function App() {
         </header>
         {connectionError && (
           <div className="connection-banner">
-            The backend is not connected. Start the local server on port 8001.
+            {connectionError}
             <button onClick={() => void refresh()}>Reconnect</button>
           </div>
         )}
@@ -315,9 +412,16 @@ export default function App() {
                 health={health}
                 notify={notify}
                 onDirty={setHasUnsavedChanges}
+                previous={activeIndex > 0 ? queue[activeIndex - 1] : undefined}
+                next={activeIndex >= 0 ? queue[activeIndex + 1] : undefined}
+                onNavigate={openBill}
                 onBack={() => nav("invoices")}
                 onChange={(doc) => {
                   setActive(doc);
+                  if (doc.status !== "approved")
+                    setSelected((current) =>
+                      current.filter((id) => id !== doc.id),
+                    );
                   void refresh();
                 }}
                 onExport={() => openExport([active.id])}
@@ -457,10 +561,10 @@ export default function App() {
                   </span>
                   <div>
                     <span>Awaiting review</span>
-                    <strong>{pending.length}</strong>
+                    <strong>{counts.review}</strong>
                     <small>
-                      {processing.length
-                        ? processing.length + " more processing"
+                      {counts.processing
+                        ? counts.processing + " more processing"
                         : "Ready for your attention"}
                     </small>
                   </div>
@@ -471,7 +575,7 @@ export default function App() {
                   </span>
                   <div>
                     <span>Approved bills</span>
-                    <strong>{approved.length}</strong>
+                    <strong>{counts.approved}</strong>
                     <small>Checked and ready to export</small>
                   </div>
                 </div>
@@ -482,15 +586,13 @@ export default function App() {
                   <div>
                     <span>Approved value</span>
                     <strong className="money-stat">
-                      {money(
-                        approved.reduce(
-                          (sum, doc) =>
-                            sum + Number(doc.invoice.grand_total || 0),
-                          0,
-                        ),
-                      )}
+                      {money(inbox?.approved_value)}
                     </strong>
-                    <small>Total of approved invoices</small>
+                    <small>
+                      {query || dateFrom || dateTo
+                        ? "Matching search and bill dates"
+                        : "Total of approved invoices"}
+                    </small>
                   </div>
                 </div>
               </div>
@@ -544,15 +646,18 @@ export default function App() {
                 <div className="table-toolbar">
                   <div className="tabs">
                     {[
-                      ["all", "All bills", documents.length],
-                      ["review", "Needs review", pending.length],
-                      ["approved", "Approved", approved.length],
-                      ["processing", "Processing", processing.length],
+                      ["all", "All bills", counts.all],
+                      ["review", "Needs review", counts.review],
+                      ["approved", "Approved", counts.approved],
+                      ["processing", "Processing", counts.processing],
                     ].map(([key, label, count]) => (
                       <button
                         key={key}
                         className={filter === key ? "active" : ""}
-                        onClick={() => setFilter(String(key))}
+                        onClick={() => {
+                          setFilter(String(key));
+                          setPage(1);
+                        }}
                       >
                         {label}
                         <span>{count}</span>
@@ -563,18 +668,87 @@ export default function App() {
                     <Search size={15} />
                     <input
                       aria-label="Search bills"
-                      placeholder="Search bills or suppliers…"
+                      placeholder="Bill, supplier, GSTIN…"
                       value={search}
+                      maxLength={200}
                       onChange={(event) => setSearch(event.target.value)}
                     />
                   </label>
                 </div>
+                <div className="inbox-filters">
+                  <label className="field">
+                    <span>Bill date from</span>
+                    <input
+                      type="date"
+                      value={dateFrom}
+                      max={dateTo || undefined}
+                      onChange={(event) => {
+                        setDateFrom(event.target.value);
+                        setPage(1);
+                      }}
+                    />
+                  </label>
+                  <label className="field">
+                    <span>Bill date to</span>
+                    <input
+                      type="date"
+                      value={dateTo}
+                      min={dateFrom || undefined}
+                      onChange={(event) => {
+                        setDateTo(event.target.value);
+                        setPage(1);
+                      }}
+                    />
+                  </label>
+                  <label className="field">
+                    <span>Sort by</span>
+                    <select
+                      value={order}
+                      onChange={(event) => {
+                        setOrder(event.target.value);
+                        setPage(1);
+                      }}
+                    >
+                      <option value="newest">Recently uploaded</option>
+                      <option value="bill_date">Newest bill date</option>
+                      <option value="amount">Highest amount</option>
+                    </select>
+                  </label>
+                  {(search || dateFrom || dateTo || filter !== "all") && (
+                    <button
+                      className="text-button"
+                      onClick={() => {
+                        setSearch("");
+                        setQuery("");
+                        setDateFrom("");
+                        setDateTo("");
+                        setFilter("all");
+                        setPage(1);
+                      }}
+                    >
+                      Clear filters
+                    </button>
+                  )}
+                </div>
+                {dateFrom && dateTo && dateFrom > dateTo && (
+                  <p className="filter-error" role="alert">
+                    Choose an end date on or after the start date.
+                  </p>
+                )}
                 <div className="selection-bar">
                   <span>
                     {exportIds.length
                       ? exportIds.length + " approved bill(s) selected"
                       : "Select approved bills to create a workbook"}
                   </span>
+                  {selected.length > 0 && (
+                    <button
+                      className="text-button"
+                      onClick={() => setSelected([])}
+                    >
+                      Clear selection
+                    </button>
+                  )}
                   <button
                     className="button secondary small"
                     disabled={!exportIds.length}
@@ -595,16 +769,16 @@ export default function App() {
                       </span>
                     </span>
                     <h3>
-                      {documents.length
+                      {inbox?.total
                         ? "No bills match your filters"
                         : "Your first bill starts here"}
                     </h3>
                     <p>
-                      {documents.length
+                      {inbox?.total
                         ? "Try another supplier, bill number or status."
                         : "Upload a supplier bill. Review its entries, then export to Excel."}
                     </p>
-                    {!documents.length && (
+                    {!inbox?.total && (
                       <button
                         className="button primary"
                         onClick={() => input.current?.click()}
@@ -637,7 +811,10 @@ export default function App() {
                                   .map((doc) => doc.id);
                                 setSelected(
                                   event.target.checked
-                                    ? [...new Set([...selected, ...ids])]
+                                    ? [...new Set([...selected, ...ids])].slice(
+                                        0,
+                                        200,
+                                      )
                                     : selected.filter(
                                         (id) => !ids.includes(id),
                                       ),
@@ -660,7 +837,11 @@ export default function App() {
                               <input
                                 type="checkbox"
                                 aria-label={"Select " + doc.filename}
-                                disabled={doc.status !== "approved"}
+                                disabled={
+                                  doc.status !== "approved" ||
+                                  (selected.length >= 200 &&
+                                    !selected.includes(doc.id))
+                                }
                                 checked={selected.includes(doc.id)}
                                 onChange={(event) =>
                                   setSelected(
@@ -674,7 +855,7 @@ export default function App() {
                             <td>
                               <button
                                 className="file-cell file-link"
-                                onClick={() => setActiveId(doc.id)}
+                                onClick={() => openBill(doc.id)}
                               >
                                 <span
                                   className={
@@ -716,7 +897,7 @@ export default function App() {
                               <button
                                 className="icon-button"
                                 aria-label={"Review " + doc.filename}
-                                onClick={() => setActiveId(doc.id)}
+                                onClick={() => openBill(doc.id)}
                               >
                                 <ChevronRight size={18} />
                               </button>
@@ -729,12 +910,33 @@ export default function App() {
                 )}
                 <div className="table-footer">
                   <span>
-                    {filtered.length} of {documents.length} bills
+                    {inbox?.matched
+                      ? `${(inbox.page - 1) * inbox.page_size + 1}–${(inbox.page - 1) * inbox.page_size + filtered.length}`
+                      : "0"}{" "}
+                    of {inbox?.matched ?? 0} matching bills
                   </span>
-                  <span>
-                    <ShieldCheck size={13} />
-                    Originals preserved · Approval required
-                  </span>
+                  <div className="pagination">
+                    <button
+                      className="icon-button"
+                      aria-label="Previous page of bills"
+                      disabled={loading || page <= 1}
+                      onClick={() => setPage(page - 1)}
+                    >
+                      <ChevronLeft size={17} />
+                    </button>
+                    <span>
+                      Page {inbox?.page ?? page} of{" "}
+                      {Math.max(1, Math.ceil((inbox?.matched ?? 0) / 25))}
+                    </span>
+                    <button
+                      className="icon-button"
+                      aria-label="Next page of bills"
+                      disabled={loading || page * 25 >= (inbox?.matched ?? 0)}
+                      onClick={() => setPage(page + 1)}
+                    >
+                      <ChevronRight size={17} />
+                    </button>
+                  </div>
                 </div>
               </div>
               <div className="workflow-strip">
@@ -822,6 +1024,13 @@ export default function App() {
             </p>
           </div>
         </Modal>
+      )}
+      {showUploads && uploadResult && (
+        <UploadReport
+          result={uploadResult}
+          onClose={() => setShowUploads(false)}
+          onOpen={openBill}
+        />
       )}
       {exporting && (
         <ExportDialog

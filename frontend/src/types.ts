@@ -70,6 +70,37 @@ export interface Health {
   limits: { file_mb: number; batch_files: number; pages: number };
   export_fields: Record<string, string>;
 }
+export type DocumentSummary = Pick<
+  Document,
+  | "id"
+  | "filename"
+  | "status"
+  | "method"
+  | "page_count"
+  | "version"
+  | "error"
+  | "created_at"
+  | "updated_at"
+> & {
+  invoice: Pick<
+    Invoice,
+    "supplier_name" | "bill_number" | "bill_date" | "grand_total"
+  >;
+};
+export interface InboxPage {
+  items: DocumentSummary[];
+  total: number;
+  matched: number;
+  page: number;
+  page_size: number;
+  counts: { all: number; review: number; approved: number; processing: number };
+  approved_value: string;
+}
+export interface UploadResult {
+  created: { id: string; filename: string }[];
+  duplicates: { id: string; filename: string }[];
+  errors: { filename: string; message: string }[];
+}
 export interface HistoryRecord {
   id: string;
   action: string;

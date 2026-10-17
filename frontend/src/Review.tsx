@@ -70,6 +70,9 @@ export function Review({
   onChange,
   onExport,
   onDirty,
+  previous,
+  next,
+  onNavigate,
 }: {
   document: Document;
   health: Health | null;
@@ -78,6 +81,9 @@ export function Review({
   onChange: (doc: Document) => void;
   onExport: () => void;
   onDirty: (dirty: boolean) => void;
+  previous?: { id: string; filename: string };
+  next?: { id: string; filename: string };
+  onNavigate: (id: string) => void;
 }) {
   const [invoice, setInvoice] = useState<Invoice>(structuredClone(doc.invoice));
   const [dirty, setDirty] = useState(false);
@@ -205,10 +211,32 @@ export function Review({
   }
   return (
     <section className="page review-page">
-      <button className="back-link" onClick={onBack}>
-        <ArrowLeft size={15} />
-        All invoices
-      </button>
+      <div className="review-navigation">
+        <button className="back-link" onClick={onBack}>
+          <ArrowLeft size={15} />
+          All invoices
+        </button>
+        <div className="button-row">
+          <button
+            className="button secondary small"
+            disabled={!previous || !!busy}
+            title={previous?.filename}
+            onClick={() => previous && onNavigate(previous.id)}
+          >
+            <ChevronLeft size={15} />
+            Previous bill
+          </button>
+          <button
+            className="button secondary small"
+            disabled={!next || !!busy}
+            title={next?.filename}
+            onClick={() => next && onNavigate(next.id)}
+          >
+            Next bill
+            <ChevronRight size={15} />
+          </button>
+        </div>
+      </div>
       <div className="page-heading">
         <div>
           <div className="review-title">
