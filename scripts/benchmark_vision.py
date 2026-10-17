@@ -145,6 +145,12 @@ def score(reading, expected):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--limit", type=int, default=100)
+    parser.add_argument(
+        "--start-at",
+        type=int,
+        default=1,
+        help="Resume at this 1-based input; earlier inputs must already have valid cached attempts.",
+    )
     parser.add_argument("--model", choices=MODELS)
     parser.add_argument("--retry-errors", action="store_true")
     parser.add_argument(
@@ -166,6 +172,8 @@ def main():
     args = parser.parse_args()
     if not 1 <= args.limit <= 100:
         parser.error("--limit must be between 1 and 100")
+    if not 1 <= args.start_at <= args.limit:
+        parser.error("--start-at must be between 1 and --limit")
     if not 0 <= args.pause_seconds <= 60:
         parser.error("--pause-seconds must be between 0 and 60")
     from backend import vision
@@ -194,6 +202,8 @@ def main():
             if hashlib.sha256(source.read_bytes()).hexdigest() != row["sha256"]:
                 raise ValueError("Source image checksum mismatch.")
             result_file = model_dir / (source.stem + ".json")
+            if index < args.start_at and not result_file.exists():
+                raise RuntimeError("Cannot skip an input without a recorded attempt.")
             previous_attempts = []
             if result_file.exists():
                 result = json.loads(result_file.read_text(encoding="utf-8"))
@@ -203,7 +213,9 @@ def main():
                     or (model_digest and result.get("model_digest") != model_digest)
                 ):
                     raise ValueError("Cached run does not match the evaluation input.")
-                if not args.refresh and not (args.retry_errors and result.get("error")):
+                if index < args.start_at or (
+                    not args.refresh and not (args.retry_errors and result.get("error"))
+                ):
                     print(f"{model} {index}/{len(rows)} cached", flush=True)
                     continue
                 previous_attempts = result.get("previous_attempts", []) + [
