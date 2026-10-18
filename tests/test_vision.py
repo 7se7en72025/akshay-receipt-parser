@@ -1,4 +1,5 @@
 import copy
+import hashlib
 import json
 import tempfile
 import unittest
@@ -63,6 +64,9 @@ class VisionComparisonTests(unittest.TestCase):
         ):
             result = vision.read_page("unused", "image/png", 1, "test")
         self.assertEqual(result["reading"]["grand_total"], "118.00")
+        self.assertEqual(result["raw_response"], response.json()["message"]["content"])
+        self.assertEqual(result["input_image_sha256"], hashlib.sha256(b"image").hexdigest())
+        self.assertEqual(result["preprocessing_version"], vision.PREPROCESSING_VERSION)
         request = post.call_args.kwargs["json"]
         self.assertEqual(request["format"], vision.PageReading.model_json_schema())
         self.assertEqual(request["messages"], [
@@ -297,6 +301,20 @@ class VisionComparisonTests(unittest.TestCase):
             encoded = vision.page_image(path, "image/png", 1)
             with Image.open(io.BytesIO(base64.b64decode(encoded))) as image:
                 self.assertEqual(image.size, (1280, 640))
+            self.assertEqual(path.read_bytes(), original)
+
+    def test_tall_receipt_keeps_one_full_source_view_without_changing_source(self):
+        import base64
+        import io
+
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "receipt.png"
+            with Image.new("RGB", (500, 1600), (250, 250, 250)) as image:
+                image.save(path)
+            original = path.read_bytes()
+            encoded = vision.page_image(path, "image/png", 1)
+            with Image.open(io.BytesIO(base64.b64decode(encoded))) as image:
+                self.assertEqual(image.size, (400, 1280))
             self.assertEqual(path.read_bytes(), original)
 
 

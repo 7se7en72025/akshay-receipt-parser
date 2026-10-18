@@ -26,6 +26,7 @@ from .models import number
 
 PROMPT_VERSION = "vision-read-v4"
 NORMALIZATION_VERSION = "money-format-v1"
+PREPROCESSING_VERSION = "bounded-original-v1"
 IMAGE_EDGE = 1280
 MODEL_OPTIONS = {
     "temperature": 0,
@@ -121,8 +122,11 @@ def reader_signature(model, model_digest):
         "normalization_version": NORMALIZATION_VERSION,
         "preprocessing_version": globals().get("PREPROCESSING_VERSION", "bounded-original-v1"),
         "image_edge": IMAGE_EDGE, "model_options": model_options(model),
-        "reader_source_sha256": hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
-        "image_helper_sha256": hashlib.sha256(preparation.read_bytes()).hexdigest(),
+        "reader_source_sha256": hashlib.sha256(Path(__file__).read_text(encoding="utf-8").encode()).hexdigest(),
+        "image_helper_sha256": hashlib.sha256(preparation.read_text(encoding="utf-8").encode()).hexdigest(),
+        "numeric_reader_sha256": hashlib.sha256(
+            Path(__file__).with_name("models.py").read_text(encoding="utf-8").encode()
+        ).hexdigest(),
     }
 
 
@@ -213,12 +217,18 @@ def read_page(path, mime, page_number, model, timeout=180):
         "page": page_number,
         "reading": normalize_reading(reading.model_dump(mode="json")),
         "raw_reading": raw_reading,
+        "raw_response": payload["message"]["content"],
+        "input_image_sha256": hashlib.sha256(base64.b64decode(image)).hexdigest(),
         "normalization_version": NORMALIZATION_VERSION,
         "seconds": round(time.monotonic() - started, 3),
         "output_tokens": payload.get("eval_count"),
         "prompt_version": PROMPT_VERSION,
+        "base_prompt_sha256": hashlib.sha256(PROMPT.encode()).hexdigest(),
+        "effective_prompt_sha256": hashlib.sha256(PROMPT.encode()).hexdigest(),
         "printed_date": printed_date,
         "image_edge": IMAGE_EDGE,
+        "image_layout": "original",
+        "preprocessing_version": PREPROCESSING_VERSION,
         "model_options": model_options(model),
     }
 
@@ -248,6 +258,7 @@ def normalize_reading(reading):
         for field in ("unit_price", "amount"):
             item[field] = numeric(item.get(field))
     return result
+
 
 
 def printed_date_value(value):
