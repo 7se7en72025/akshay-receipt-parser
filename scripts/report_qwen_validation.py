@@ -1,4 +1,5 @@
 """Report the completed development rerun and a separately frozen new 100-bill set."""
+import base64
 import contextlib
 import hashlib
 import io
@@ -40,7 +41,26 @@ def protocol_signature(model_digest):
     return evaluation_signature(MODEL, model_digest)
 
 
-def collect(cache):
+def validate_request_artifact(cache, row, attempt):
+    from backend import vision
+    if attempt.get("error"):
+        return False
+    if attempt.get("base_prompt_sha256") != hashlib.sha256(vision.PROMPT.encode()).hexdigest():
+        raise RuntimeError("Saved request prompt differs from the frozen reader.")
+    image = vision.page_image(cache / row["image_file"], "image/jpeg", 1)
+    if attempt.get("input_image_sha256") != hashlib.sha256(base64.b64decode(image)).hexdigest():
+        raise RuntimeError("Saved prepared image differs from the original source preparation.")
+    raw = vision.PageReading.model_validate_json(attempt["raw_response"]).model_dump(mode="json")
+    if raw != attempt["raw_reading"]:
+        raise RuntimeError("Raw model response was changed after reading.")
+    normalized = dict(raw)
+    normalized["bill_date"] = vision.printed_date_value(raw.get("bill_date"))
+    if vision.normalize_reading(normalized) != attempt["reading"]:
+        raise RuntimeError("Normalized reading cannot be reconstructed from the raw response.")
+    return True
+
+
+def collect(cache, require_request_metadata=False):
     from backend import vision
     manifest = json.loads((cache / "manifest.json").read_text(encoding="utf-8"))
     rows = manifest["documents"]
@@ -59,6 +79,10 @@ def collect(cache):
     readings = {row["file_name"]: json.loads(
         (directory / (Path(row["image_file"]).stem + ".json")).read_text(encoding="utf-8")
     ) for row in rows}
+    if require_request_metadata:
+        summary["request_artifacts_verified"] = sum(
+            validate_request_artifact(cache, row, readings[row["file_name"]]) for row in rows
+        )
     return manifest, summary, readings
 
 
@@ -118,7 +142,9 @@ def main():
         raise RuntimeError("Active reader does not match the development acceptance gate.")
     development_manifest = json.loads((HOME / "benchmark-new100/manifest.json").read_text())
     development = candidate if adopt else first
-    validation_manifest, validation, validation_readings = collect(HOME / "benchmark-validation100")
+    validation_manifest, validation, validation_readings = collect(
+        HOME / "benchmark-validation100", require_request_metadata=True,
+    )
     if {row["sha256"] for row in development_manifest["documents"]} & {
         row["sha256"] for row in validation_manifest["documents"]
     }:
