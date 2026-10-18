@@ -1,0 +1,26 @@
+{
+  "frozen_at": "2026-10-18T00:12:53.291925+00:00",
+  "signature": {
+    "model": "qwen3-vl:2b-instruct-q4_K_M",
+    "model_digest": "ea422f1e73652a95479954d8572d3c8c6022f628ce2d38a1a04aae1b7f2d5300",
+    "prompt_version": "vision-read-v4",
+    "prompt_sha256": "7bfdef97ce253c13171a393fa94157c003de4f3a0a7a4fa468d880352f02d14c",
+    "schema_sha256": "556a662fc9394dec2269d7cfb8d74648a9ca47bb614e9bd600c3a99533a678ac",
+    "normalization_version": "money-format-v1",
+    "preprocessing_version": "bounded-original-v1",
+    "image_edge": 1280,
+    "model_options": {
+      "temperature": 0,
+      "seed": 0,
+      "num_ctx": 4096,
+      "num_predict": 2048,
+      "num_batch": 128
+    },
+    "reader_source_sha256": "c71b6b835835fa3369cdee69895e0b1ad93df95bf07f314033f679a2144c05f9",
+    "image_helper_sha256": "30db7b4b091955ba92db0173962d6dd70e06b198cb73cc41a0c262bf1ba13235",
+    "numeric_reader_sha256": "33a15191cd11948b15570ad6af4ce62f9cabe13949730e87079878e7f7293795",
+    "scoring_sha256": "213c6b294bcf857331b564bbc3cc9684a61936b987139175e0fe7c5da5122653"
+  },
+  "selection_manifest_sha256": "c82b6780b43b7ece44fcdeca7c803cb9c3a29592ee2b59a589c8265a95618af1",
+  "runtime_version": "0.40.5"
+}
