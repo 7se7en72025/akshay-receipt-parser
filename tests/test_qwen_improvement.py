@@ -9,7 +9,7 @@ from unittest.mock import patch
 import httpx
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "scripts"))
-from benchmark_vision import require_memory, unload_model  # noqa: E402
+from benchmark_vision import cool_gpu, require_memory, unload_model  # noqa: E402
 from report_qwen_improvement import paired_changes  # noqa: E402
 
 
@@ -23,6 +23,16 @@ def fixture():
 
 
 class PairedQwenTests(unittest.TestCase):
+    def test_hot_gpu_is_unloaded_and_cooled_before_another_request(self):
+        with (
+            patch("benchmark_vision.gpu_temperature", side_effect=[89, 85, 82]),
+            patch("benchmark_vision.unload_model") as unload,
+            patch("benchmark_vision.time.sleep") as sleep,
+        ):
+            cool_gpu("test-model", "http://localhost")
+        unload.assert_called_once_with("test-model", "http://localhost")
+        self.assertEqual(sleep.call_count, 2)
+
     def test_batch_cleanup_only_requests_model_unloading(self):
         response = httpx.Response(
             200, json={"done_reason": "unload"},

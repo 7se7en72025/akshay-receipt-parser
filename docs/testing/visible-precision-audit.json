@@ -1,0 +1,50 @@
+{
+  "audited_at": "2026-10-17T23:48:12.153674+00:00",
+  "validation_inference_started_at_audit": false,
+  "template_revision": "91082ede48d2c0b2e32d9c489ea35f34e9922a99",
+  "printed_money_format": "%.2f",
+  "original_metadata_changed": false,
+  "full_label_reference_retains_hidden_precision": true,
+  "development_100_scores_unchanged": true,
+  "precision_only_fields": [
+    {
+      "id": "synth_0137_6bbd647e.png",
+      "field": "items.2.unit_price",
+      "metadata_value": 0.002,
+      "printed_value": "0.00",
+      "template": "utility_bill"
+    }
+  ],
+  "templates": [
+    {
+      "name": "event_ticket.html",
+      "sha256": "9b02f179ed1b1b97fd0b7679b0d4d583e52c34e12b2263258740333d30350223",
+      "url": "https://raw.githubusercontent.com/alamgirqazi/synthetic-invoice-gen/91082ede48d2c0b2e32d9c489ea35f34e9922a99/templates/event_ticket.html"
+    },
+    {
+      "name": "formal_corporate.html",
+      "sha256": "1c8cb4de54b5c9c743750fd36423b3b3ca9a7f7cedd6ea5efb2a5f95e5c23c0b",
+      "url": "https://raw.githubusercontent.com/alamgirqazi/synthetic-invoice-gen/91082ede48d2c0b2e32d9c489ea35f34e9922a99/templates/formal_corporate.html"
+    },
+    {
+      "name": "freelancer_invoice.html",
+      "sha256": "431ab50ea8a3170004122d53f437fede7a34a2148973d9b7de0ce839ade2e3b7",
+      "url": "https://raw.githubusercontent.com/alamgirqazi/synthetic-invoice-gen/91082ede48d2c0b2e32d9c489ea35f34e9922a99/templates/freelancer_invoice.html"
+    },
+    {
+      "name": "modern_minimal.html",
+      "sha256": "0274a635d344a391c94ec65089190bfbda42048cf9adb069651392ab4785dfee",
+      "url": "https://raw.githubusercontent.com/alamgirqazi/synthetic-invoice-gen/91082ede48d2c0b2e32d9c489ea35f34e9922a99/templates/modern_minimal.html"
+    },
+    {
+      "name": "pos_thermal.html",
+      "sha256": "040f15a8bd359cfd5d2dd4d4c4661a53534d598eb2193c65e42a38388128c45c",
+      "url": "https://raw.githubusercontent.com/alamgirqazi/synthetic-invoice-gen/91082ede48d2c0b2e32d9c489ea35f34e9922a99/templates/pos_thermal.html"
+    },
+    {
+      "name": "utility_bill.html",
+      "sha256": "605033e1d789619977b4e40da20d00d57aa6a787dc79909f0eb4473af9f3f730",
+      "url": "https://raw.githubusercontent.com/alamgirqazi/synthetic-invoice-gen/91082ede48d2c0b2e32d9c489ea35f34e9922a99/templates/utility_bill.html"
+    }
+  ]
+}

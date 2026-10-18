@@ -24,6 +24,10 @@ def validate_attempts(manifest, directory, model):
             if (
                 attempt.get("image_edge") != vision.IMAGE_EDGE
                 or attempt.get("model_options") != vision.model_options(model)
+                or attempt.get(
+                    "preprocessing_version",
+                    "bounded-original-v1" if attempt.get("prompt_version") == "vision-read-v4" else None,
+                ) != vision.PREPROCESSING_VERSION
             ):
                 raise RuntimeError(f"Cached image or generation settings mismatch: {path.name}")
 

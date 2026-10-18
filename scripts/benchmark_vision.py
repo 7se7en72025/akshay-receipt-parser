@@ -8,6 +8,7 @@ deliberately do not print labels such as net subtotal, tax or unit price.
 import argparse
 import ctypes
 import hashlib
+import inspect
 import json
 import os
 import statistics
@@ -105,6 +106,35 @@ def unload_model(model, url):
             raise RuntimeError("Model did not confirm unloading; inspect the local runtime.")
 
 
+def gpu_temperature():
+    try:
+        result = subprocess.run(
+            ["nvidia-smi", "--query-gpu=temperature.gpu", "--format=csv,noheader,nounits"],
+            capture_output=True, text=True, timeout=3, check=True,
+            creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
+        )
+        return max(float(line.strip()) for line in result.stdout.splitlines())
+    except (OSError, subprocess.SubprocessError, ValueError):
+        return None
+
+
+def cool_gpu(model, url):
+    temperature = gpu_temperature()
+    if temperature is None or temperature < 87:
+        return
+    print(f"GPU at {temperature:g} C; releasing model and waiting for <=82 C.", flush=True)
+    unload_model(model, url)
+    deadline = time.monotonic() + 180
+    while temperature is not None and temperature > 82:
+        if time.monotonic() >= deadline:
+            raise RuntimeError(
+                "Evaluation stopped before the next bill: GPU cooling wait expired. "
+                "Saved readings remain intact; resume after the laptop cools."
+            )
+        time.sleep(5)
+        temperature = gpu_temperature()
+
+
 def reference(row, visible=False):
     template = row["_template_used"]
     number = row["invoice_number"] or row["document_number"] or row["receipt_number"]
@@ -135,12 +165,9 @@ def reference(row, visible=False):
     if not visible:
         return expected
     # Audited against source templates and sample images, BEFORE model evaluation.
-    # Bare dollar signs do not distinguish USD, CAD and AUD.
-    if template not in {"formal_corporate", "utility_bill"} and expected["currency"] in {
-        "USD",
-        "CAD",
-        "AUD",
-    }:
+    # The pinned renderer uses bare $ for USD, but qualified C$ / A$ for CAD/AUD.
+    # Only the unqualified dollar token is ambiguous without an explicit code.
+    if template not in {"formal_corporate", "utility_bill"} and expected["currency"] == "USD":
         expected["currency"] = None
     if template == "event_ticket":
         expected["taxable_total"] = expected["tax_total"] = None
@@ -156,6 +183,17 @@ def reference(row, visible=False):
             template == "modern_minimal" and not row["taxes"] and not row["document_total_tax"]
         ):
             expected["tax_total"] = None
+    # All six pinned templates print money with Python/Jinja "%.2f".
+    # Hidden metadata precision is retained in full-label scoring above.
+    for field in ("taxable_total", "tax_total", "grand_total"):
+        if expected[field] is not None:
+            expected[field] = "%.2f" % expected[field]
+    for item in expected["items"]:
+        for field in ("unit_price", "amount"):
+            if item[field] is not None:
+                item[field] = "%.2f" % item[field]
+        if template == "formal_corporate" and item["quantity"] is not None:
+            item["quantity"] = "%.2f" % item["quantity"]
     return expected
 
 
@@ -234,6 +272,15 @@ def score(reading, expected):
     }
 
 
+def evaluation_signature(model, model_digest):
+    from backend import vision
+    signature = vision.reader_signature(model, model_digest)
+    signature["scoring_sha256"] = hashlib.sha256(
+        (inspect.getsource(reference) + inspect.getsource(score)).encode()
+    ).hexdigest()
+    return signature
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--limit", type=int, default=100)
@@ -295,8 +342,13 @@ def main():
             model_digest = installed[model]
         if args.protocol_lock:
             lock = json.loads(args.protocol_lock.read_text(encoding="utf-8"))
-            if lock["signature"] != vision.reader_signature(model, model_digest):
+            if lock["signature"] != evaluation_signature(model, model_digest):
                 raise RuntimeError("Reader differs from the frozen validation protocol; no inference attempted.")
+            with httpx.Client(trust_env=False, timeout=5) as client:
+                version = client.get(vision.OLLAMA_URL + "/api/version")
+                version.raise_for_status()
+            if version.json()["version"] != lock["runtime_version"]:
+                raise RuntimeError("Runtime differs from the frozen validation protocol.")
         model_dir = output / model.replace(":", "_")
         model_dir.mkdir(exist_ok=True)
         fresh_readings = 0
@@ -329,6 +381,7 @@ def main():
                 # Outside the inference try/except: a resource pause must not be
                 # recorded as a model attempt or replace a previous valid reading.
                 try:
+                    cool_gpu(model, vision.OLLAMA_URL)
                     check_resources(model, vision.OLLAMA_URL)
                 except RuntimeError as error:
                     unload_model(model, vision.OLLAMA_URL)
@@ -411,7 +464,7 @@ def baseline(source):
     }
 
 
-def summarize(manifest, model_dir, model, count):
+def summarize(manifest, model_dir, model, count, generation_protocol=None):
     from backend import vision
 
     results = []
@@ -452,6 +505,7 @@ def summarize(manifest, model_dir, model, count):
             "prompt_version": vision.PROMPT_VERSION,
             "prompt_sha256": hashlib.sha256(vision.PROMPT.encode()).hexdigest(),
             "image_edge": vision.IMAGE_EDGE,
+            "preprocessing_version": getattr(vision, "PREPROCESSING_VERSION", "bounded-original-v1"),
             "model_options": vision.model_options(model),
             "description": "Strict row order, exact decimal values and normalized whitespace/case; no balancing or reference-fed inference.",
         },
@@ -494,6 +548,14 @@ def summarize(manifest, model_dir, model, count):
             "ocr_image_bounds": [2400, 3200],
             "description": "Application OCR preprocessing on original images; no vision model or vision context is used.",
         }
+    if generation_protocol is not None:
+        # Regrading never relabels the prompt/settings that generated old readings.
+        summary["protocol"] = generation_protocol
+    summary["scoring_protocol"] = {
+        "sha256": hashlib.sha256((inspect.getsource(reference) + inspect.getsource(score)).encode()).hexdigest(),
+        "currency_visibility": "qualified-CAD-AUD-v2",
+        "display_precision": "pinned-template-2dp",
+    }
     (model_dir / "summary.json").write_text(json.dumps(summary, indent=2), encoding="utf-8")
     print(
         json.dumps({key: value for key, value in summary.items() if key != "results"}, indent=2),

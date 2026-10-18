@@ -1,0 +1,15 @@
+{
+  "audited_at": "2026-10-18T00:08:54.244964+00:00",
+  "before_validation_inference": true,
+  "renderer_source": "https://github.com/alamgirqazi/synthetic-invoice-gen/blob/91082ede48d2c0b2e32d9c489ea35f34e9922a99/render_receipts.py",
+  "source_text_sha256": "74466df54214a2306d7d9ed9ada90ed398345bcc32b5982a595ababd36100d68",
+  "currency_symbols": {
+    "USD": "$",
+    "CAD": "C$",
+    "AUD": "A$"
+  },
+  "correction": "Only unqualified $ is ambiguous without an explicit code; C$ and A$ remain known CAD/AUD.",
+  "source_or_metadata_edited": false,
+  "rescore_scope": "All archived compared readers, same references and raw cached responses; no new model calls.",
+  "source_quality_note": "The clean-labelled source can still clip edge text. Ambiguous/clipped fields are not filled from metadata to improve readings."
+}

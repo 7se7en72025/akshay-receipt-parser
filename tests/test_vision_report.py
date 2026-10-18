@@ -12,12 +12,76 @@ from unittest.mock import patch
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 import report_vision_benchmark as publisher  # noqa: E402
-from benchmark_vision import score  # noqa: E402
+from benchmark_vision import reference, score, summarize  # noqa: E402
 
 from backend import vision  # noqa: E402
 
 
 class VisionReportTests(unittest.TestCase):
+    def test_regrading_keeps_generation_protocol_and_original_reading(self):
+        row = {
+            "file_name": "fixture.png", "image_file": "fixture.jpg", "sha256": "fixture-sha",
+            "_template_used": "utility_bill", "invoice_number": "FIX-1",
+            "document_number": None, "receipt_number": None, "supplier_name": "Fixture",
+            "document_date": "2026-01-15", "document_currency": "GBP",
+            "document_total_net": 10, "document_total_tax": 0,
+            "document_total_amount": 10, "line_items": [],
+        }
+        manifest = {"source": "fixture", "revision": "fixture", "license": "fixture", "documents": [row]}
+        with tempfile.TemporaryDirectory(prefix="rescore-test-") as directory:
+            folder = Path(directory)
+            cache = folder / "fixture.json"
+            cache.write_text(json.dumps({"seconds": 1, "reading": reference(row, True)}))
+            original = cache.read_bytes()
+            frozen_protocol = {"prompt_version": "fixture-original", "image_edge": 999}
+            with contextlib.redirect_stdout(io.StringIO()):
+                summarize(manifest, folder, publisher.MODELS[0], 1, generation_protocol=frozen_protocol)
+            summary = json.loads((folder / "summary.json").read_text())
+            self.assertEqual(summary["protocol"], frozen_protocol)
+            self.assertEqual(cache.read_bytes(), original)
+            self.assertEqual(summary["printed_exact_bills"], 1)
+            self.assertFalse(summary["completed_100"])
+
+    def test_qualified_dollars_remain_known_but_bare_dollars_do_not(self):
+        base = {
+            "_template_used": "event_ticket", "invoice_number": None,
+            "document_number": "FIX-1", "receipt_number": None,
+            "supplier_name": "Fixture", "document_date": "2026-01-15",
+            "document_total_net": 10, "document_total_tax": 0,
+            "document_total_amount": 10, "line_items": [],
+        }
+        for code, wanted in (("USD", None), ("CAD", "CAD"), ("AUD", "AUD")):
+            with self.subTest(code=code):
+                self.assertEqual(reference({**base, "document_currency": code}, True)["currency"], wanted)
+
+    def test_visible_rate_uses_template_format_without_editing_hidden_metadata(self):
+        row = {
+            "_template_used": "utility_bill", "invoice_number": "FIX-1",
+            "document_number": None, "receipt_number": None,
+            "supplier_name": "Fixture", "document_date": "2026-01-15",
+            "document_currency": "GBP", "document_total_net": 10,
+            "document_total_tax": 0, "document_total_amount": 10,
+            "line_items": [{"description": "Fixture usage", "quantity": 5000,
+                            "unit_price": 0.002, "amount": 10}],
+        }
+        visible = reference(row, visible=True)
+        self.assertEqual(visible["items"][0]["unit_price"], "0.00")
+        self.assertEqual(reference(row)["items"][0]["unit_price"], 0.002)
+        self.assertEqual(row["line_items"][0]["unit_price"], 0.002)
+        self.assertTrue(score(visible, visible)["exact"])
+        self.assertFalse(score(visible, reference(row))["exact"])
+
+    def test_a_currency_guess_does_not_count_as_correct_abstention(self):
+        expected = {
+            "supplier_name": None, "bill_number": None, "bill_date": None,
+            "currency": None, "taxable_total": None, "tax_total": None,
+            "grand_total": None, "items": [],
+        }
+        actual = {**expected, "currency": "USD"}
+        result = score(actual, expected)
+        self.assertEqual([entry["field"] for entry in result["mismatches"]], ["currency"])
+        self.assertFalse(result["exact"])
+
     def test_money_symbols_score_by_value_without_hiding_invalid_abstentions(self):
         expected = {
             "supplier_name": "Seller",
@@ -119,6 +183,7 @@ class VisionReportTests(unittest.TestCase):
                         "prompt_version": vision.PROMPT_VERSION,
                         "model": model,
                         "image_edge": vision.IMAGE_EDGE,
+                        "preprocessing_version": vision.PREPROCESSING_VERSION,
                         "model_options": vision.model_options(model),
                     }
                     if model == publisher.MODELS[-1] and index == 0:
@@ -187,6 +252,7 @@ class VisionReportTests(unittest.TestCase):
                 "prompt_version": vision.PROMPT_VERSION,
                 "model": model,
                 "image_edge": vision.IMAGE_EDGE,
+                "preprocessing_version": vision.PREPROCESSING_VERSION,
                 "model_options": vision.model_options(model),
             }
             for field, wrong in (
@@ -194,6 +260,7 @@ class VisionReportTests(unittest.TestCase):
                 ("prompt_version", "old-prompt"),
                 ("model", "other-model"),
                 ("image_edge", 999),
+                ("preprocessing_version", "other-preparation"),
                 ("model_options", {"num_ctx": 1}),
             ):
                 with self.subTest(field=field):
