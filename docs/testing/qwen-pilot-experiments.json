@@ -1,0 +1,1412 @@
+{
+  "scope": "Same first 10 development images; no held-out images used.",
+  "rejected_candidate": "vision-read-v6",
+  "reason": "The required currency-evidence field reduced visible accuracy and introduced quantity/description errors.",
+  "v5": {
+    "protocol": {
+      "normalization_version": "money-format-v1",
+      "prompt_version": "vision-read-v5",
+      "prompt_sha256": "9c6fd2e0dd544dcbb29182df0ce3dc74b36ca5fb911e2188c2f146fc52cdbb3d",
+      "image_edge": 1280,
+      "preprocessing_version": "white-margin-tall-strips-v1",
+      "model_options": {
+        "temperature": 0,
+        "seed": 0,
+        "num_ctx": 4096,
+        "num_predict": 2048,
+        "num_batch": 128
+      },
+      "description": "Strict row order, exact decimal values and normalized whitespace/case; no balancing or reference-fed inference."
+    },
+    "source": "https://huggingface.co/datasets/alamgirqazi/invoice-ocr-synthetic",
+    "revision": "673ff85be462eb7f3715ec188a295dd17ca11115",
+    "license": "CC-BY-4.0",
+    "model": "qwen3-vl:2b-instruct-q4_K_M",
+    "documents": 10,
+    "requested_documents": 10,
+    "completed_100": false,
+    "errors": 0,
+    "printed_exact_bills": 5,
+    "label_exact_bills": 4,
+    "printed_correct_fields": 247,
+    "printed_checked_fields": 252,
+    "visible_correct_fields": 223,
+    "visible_checked_fields": 224,
+    "abstention_correct_fields": 24,
+    "abstention_checked_fields": 28,
+    "median_seconds": 6.094,
+    "total_seconds": 67.266,
+    "mismatches_by_field": {
+      "currency": 3,
+      "tax_total": 2
+    },
+    "results": [
+      {
+        "id": "synth_0000_8a064d3a.png",
+        "sha256": "f5a0551f11cea6f2edfc20dedbc3a876c2e27d3d6dc9b70cd90ebebfcbb4bf31",
+        "template": "event_ticket",
+        "seconds": 8.578,
+        "error": null,
+        "model_digest": "ea422f1e73652a95479954d8572d3c8c6022f628ce2d38a1a04aae1b7f2d5300",
+        "previous_attempts": 0,
+        "idle_pause_seconds": 5.0,
+        "unload_interval": 5,
+        "raw_date_reading": "15 July 2023",
+        "label_score": {
+          "correct": 36,
+          "checked": 48,
+          "exact": false,
+          "mismatches": [
+            {
+              "field": "taxable_total",
+              "actual": null,
+              "raw_actual": null,
+              "expected": 675.0,
+              "kind": "missing"
+            },
+            {
+              "field": "tax_total",
+              "actual": null,
+              "raw_actual": null,
+              "expected": 47.25,
+              "kind": "missing"
+            },
+            {
+              "field": "items.0.unit_price",
+              "actual": null,
+              "raw_actual": null,
+              "expected": 60.0,
+              "kind": "missing"
+            },
+            {
+              "field": "items.1.unit_price",
+              "actual": null,
+              "raw_actual": null,
+              "expected": 40.0,
+              "kind": "missing"
+            },
+            {
+              "field": "items.2.unit_price",
+              "actual": null,
+              "raw_actual": null,
+              "expected": 120.0,
+              "kind": "missing"
+            },
+            {
+              "field": "items.3.unit_price",
+              "actual": null,
+              "raw_actual": null,
+              "expected": 80.0,
+              "kind": "missing"
+            },
+            {
+              "field": "items.4.unit_price",
+              "actual": null,
+              "raw_actual": null,
+              "expected": 200.0,
+              "kind": "missing"
+            },
+            {
+              "field": "items.5.unit_price",
+              "actual": null,
+              "raw_actual": null,
+              "expected": 35.0,
+              "kind": "missing"
+            },
+            {
+              "field": "items.6.unit_price",
+              "actual": null,
+              "raw_actual": null,
+              "expected": 20.0,
+              "kind": "missing"
+            },
+            {
+              "field": "items.7.unit_price",
+              "actual": null,
+              "raw_actual": null,
+              "expected": 15.0,
+              "kind": "missing"
+            },
+            {
+              "field": "items.8.unit_price",
+              "actual": null,
+              "raw_actual": null,
+              "expected": 50.0,
+              "kind": "missing"
+            },
+            {
+              "field": "items.9.unit_price",
+              "actual": null,
+              "raw_actual": null,
+              "expected": 55.0,
+              "kind": "missing"
+            }
+          ],
+          "visible_correct": 36,
+          "visible_checked": 48,
+          "abstention_correct": 0,
+          "abstention_checked": 0
+        },
+        "printed_score": {
+          "correct": 47,
+          "checked": 48,
+          "exact": false,
+          "mismatches": [
+            {
+              "field": "currency",
+              "actual": "USD",
+              "raw_actual": "USD",
+              "expected": null,
+              "kind": "wrong"
+            }
+          ],
+          "visible_correct": 35,
+          "visible_checked": 35,
+          "abstention_correct": 12,
+          "abstention_checked": 13
+        }
+      },
+      {
+        "id": "synth_0001_188ad2b2.png",
+        "sha256": "048dfde0b74c9601a4df8d2777f11c0a6818e0ce57f495baf350ec8e1c3937dc",
+        "template": "event_ticket",
+        "seconds": 5.141,
+        "error": null,
+        "model_digest": "ea422f1e73652a95479954d8572d3c8c6022f628ce2d38a1a04aae1b7f2d5300",
+        "previous_attempts": 0,
+        "idle_pause_seconds": 5.0,
+        "unload_interval": 5,
+        "raw_date_reading": "15 July 2023",
+        "label_score": {
+          "correct": 15,
+          "checked": 20,
+          "exact": false,
+          "mismatches": [
+            {
+              "field": "taxable_total",
+              "actual": null,
+              "raw_actual": null,
+              "expected": 185.0,
+              "kind": "missing"
+            },
+            {
+              "field": "tax_total",
+              "actual": null,
+              "raw_actual": null,
+              "expected": 10.0,
+              "kind": "missing"
+            },
+            {
+              "field": "items.0.unit_price",
+              "actual": null,
+              "raw_actual": null,
+              "expected": 30.0,
+              "kind": "missing"
+            },
+            {
+              "field": "items.1.unit_price",
+              "actual": null,
+              "raw_actual": null,
+              "expected": 75.0,
+              "kind": "missing"
+            },
+            {
+              "field": "items.2.unit_price",
+              "actual": null,
+              "raw_actual": null,
+              "expected": 25.0,
+              "kind": "missing"
+            }
+          ],
+          "visible_correct": 15,
+          "visible_checked": 20,
+          "abstention_correct": 0,
+          "abstention_checked": 0
+        },
+        "printed_score": {
+          "correct": 20,
+          "checked": 20,
+          "exact": true,
+          "mismatches": [],
+          "visible_correct": 15,
+          "visible_checked": 15,
+          "abstention_correct": 5,
+          "abstention_checked": 5
+        }
+      },
+      {
+        "id": "synth_0002_8f01361b.png",
+        "sha256": "31b538c6fd7c1b3af5ffde784fedc8d2148e09856297120f3a725554a075fa08",
+        "template": "freelancer_invoice",
+        "seconds": 5.985,
+        "error": null,
+        "model_digest": "ea422f1e73652a95479954d8572d3c8c6022f628ce2d38a1a04aae1b7f2d5300",
+        "previous_attempts": 0,
+        "idle_pause_seconds": 5.0,
+        "unload_interval": 5,
+        "raw_date_reading": "15/07/2023",
+        "label_score": {
+          "correct": 23,
+          "checked": 24,
+          "exact": false,
+          "mismatches": [
+            {
+              "field": "currency",
+              "actual": "CNY",
+              "raw_actual": "CNY",
+              "expected": "CAD",
+              "kind": "wrong"
+            }
+          ],
+          "visible_correct": 23,
+          "visible_checked": 24,
+          "abstention_correct": 0,
+          "abstention_checked": 0
+        },
+        "printed_score": {
+          "correct": 23,
+          "checked": 24,
+          "exact": false,
+          "mismatches": [
+            {
+              "field": "currency",
+              "actual": "CNY",
+              "raw_actual": "CNY",
+              "expected": null,
+              "kind": "wrong"
+            }
+          ],
+          "visible_correct": 23,
+          "visible_checked": 23,
+          "abstention_correct": 0,
+          "abstention_checked": 1
+        }
+      },
+      {
+        "id": "synth_0003_d1afe8fa.png",
+        "sha256": "e9d154c6a06ee7e93107a4e6a73d59eabc41ae033dc3db5f7cc3242a8c754f47",
+        "template": "freelancer_invoice",
+        "seconds": 5.875,
+        "error": null,
+        "model_digest": "ea422f1e73652a95479954d8572d3c8c6022f628ce2d38a1a04aae1b7f2d5300",
+        "previous_attempts": 0,
+        "idle_pause_seconds": 5.0,
+        "unload_interval": 5,
+        "raw_date_reading": "15/08/2023",
+        "label_score": {
+          "correct": 23,
+          "checked": 24,
+          "exact": false,
+          "mismatches": [
+            {
+              "field": "tax_total",
+              "actual": "240.00",
+              "raw_actual": "240.00",
+              "expected": 246.0,
+              "kind": "wrong"
+            }
+          ],
+          "visible_correct": 23,
+          "visible_checked": 24,
+          "abstention_correct": 0,
+          "abstention_checked": 0
+        },
+        "printed_score": {
+          "correct": 23,
+          "checked": 24,
+          "exact": false,
+          "mismatches": [
+            {
+              "field": "tax_total",
+              "actual": "240.00",
+              "raw_actual": "240.00",
+              "expected": null,
+              "kind": "wrong"
+            }
+          ],
+          "visible_correct": 23,
+          "visible_checked": 23,
+          "abstention_correct": 0,
+          "abstention_checked": 1
+        }
+      },
+      {
+        "id": "synth_0004_6eb68b29.png",
+        "sha256": "0c5237d5140408c8f46825bf883bbc7239807359089c4c5388c91a3f668738d8",
+        "template": "event_ticket",
+        "seconds": 6.203,
+        "error": null,
+        "model_digest": "ea422f1e73652a95479954d8572d3c8c6022f628ce2d38a1a04aae1b7f2d5300",
+        "previous_attempts": 0,
+        "idle_pause_seconds": 5.0,
+        "unload_interval": 5,
+        "raw_date_reading": "15 July 2023",
+        "label_score": {
+          "correct": 18,
+          "checked": 24,
+          "exact": false,
+          "mismatches": [
+            {
+              "field": "taxable_total",
+              "actual": null,
+              "raw_actual": null,
+              "expected": 2650.0,
+              "kind": "missing"
+            },
+            {
+              "field": "tax_total",
+              "actual": null,
+              "raw_actual": null,
+              "expected": 435.0,
+              "kind": "missing"
+            },
+            {
+              "field": "items.0.unit_price",
+              "actual": null,
+              "raw_actual": null,
+              "expected": 1200.0,
+              "kind": "missing"
+            },
+            {
+              "field": "items.1.unit_price",
+              "actual": null,
+              "raw_actual": null,
+              "expected": 300.0,
+              "kind": "missing"
+            },
+            {
+              "field": "items.2.unit_price",
+              "actual": null,
+              "raw_actual": null,
+              "expected": 450.0,
+              "kind": "missing"
+            },
+            {
+              "field": "items.3.unit_price",
+              "actual": null,
+              "raw_actual": null,
+              "expected": 50.0,
+              "kind": "missing"
+            }
+          ],
+          "visible_correct": 18,
+          "visible_checked": 24,
+          "abstention_correct": 0,
+          "abstention_checked": 0
+        },
+        "printed_score": {
+          "correct": 24,
+          "checked": 24,
+          "exact": true,
+          "mismatches": [],
+          "visible_correct": 18,
+          "visible_checked": 18,
+          "abstention_correct": 6,
+          "abstention_checked": 6
+        }
+      },
+      {
+        "id": "synth_0005_553deef3.png",
+        "sha256": "050ba365a7603b8eaf78ce196982c33a0242193ed0e15f9305d7be99b2b9ef1a",
+        "template": "formal_corporate",
+        "seconds": 9.735,
+        "error": null,
+        "model_digest": "ea422f1e73652a95479954d8572d3c8c6022f628ce2d38a1a04aae1b7f2d5300",
+        "previous_attempts": 0,
+        "idle_pause_seconds": 5.0,
+        "unload_interval": 5,
+        "raw_date_reading": "15/03/2024",
+        "label_score": {
+          "correct": 20,
+          "checked": 20,
+          "exact": true,
+          "mismatches": [],
+          "visible_correct": 20,
+          "visible_checked": 20,
+          "abstention_correct": 0,
+          "abstention_checked": 0
+        },
+        "printed_score": {
+          "correct": 20,
+          "checked": 20,
+          "exact": true,
+          "mismatches": [],
+          "visible_correct": 20,
+          "visible_checked": 20,
+          "abstention_correct": 0,
+          "abstention_checked": 0
+        }
+      },
+      {
+        "id": "synth_0006_474081ca.png",
+        "sha256": "7d9492d0fb691aa6ae0bd004bfb1e4843051542a87b5c3febd1cd1e3edc97605",
+        "template": "modern_minimal",
+        "seconds": 5.313,
+        "error": null,
+        "model_digest": "ea422f1e73652a95479954d8572d3c8c6022f628ce2d38a1a04aae1b7f2d5300",
+        "previous_attempts": 0,
+        "idle_pause_seconds": 5.0,
+        "unload_interval": 5,
+        "raw_date_reading": "08/15/2023",
+        "label_score": {
+          "correct": 16,
+          "checked": 16,
+          "exact": true,
+          "mismatches": [],
+          "visible_correct": 16,
+          "visible_checked": 16,
+          "abstention_correct": 0,
+          "abstention_checked": 0
+        },
+        "printed_score": {
+          "correct": 15,
+          "checked": 16,
+          "exact": false,
+          "mismatches": [
+            {
+              "field": "currency",
+              "actual": "USD",
+              "raw_actual": "USD",
+              "expected": null,
+              "kind": "wrong"
+            }
+          ],
+          "visible_correct": 15,
+          "visible_checked": 15,
+          "abstention_correct": 0,
+          "abstention_checked": 1
+        }
+      },
+      {
+        "id": "synth_0007_7292e354.png",
+        "sha256": "d4b3f8ca279561cb3de4a54fccba7e1fe93a700015edaa0a9c696e62ccb1214d",
+        "template": "utility_bill",
+        "seconds": 5.359,
+        "error": null,
+        "model_digest": "ea422f1e73652a95479954d8572d3c8c6022f628ce2d38a1a04aae1b7f2d5300",
+        "previous_attempts": 0,
+        "idle_pause_seconds": 5.0,
+        "unload_interval": 5,
+        "raw_date_reading": "15/08/2023",
+        "label_score": {
+          "correct": 16,
+          "checked": 16,
+          "exact": true,
+          "mismatches": [],
+          "visible_correct": 16,
+          "visible_checked": 16,
+          "abstention_correct": 0,
+          "abstention_checked": 0
+        },
+        "printed_score": {
+          "correct": 16,
+          "checked": 16,
+          "exact": true,
+          "mismatches": [],
+          "visible_correct": 16,
+          "visible_checked": 16,
+          "abstention_correct": 0,
+          "abstention_checked": 0
+        }
+      },
+      {
+        "id": "synth_0008_10e4136c.png",
+        "sha256": "52b081a16c6faa55c91d28356732f1ed5d711e62ce3c791de74041cfbde1b940",
+        "template": "pos_thermal",
+        "seconds": 8.265,
+        "error": null,
+        "model_digest": "ea422f1e73652a95479954d8572d3c8c6022f628ce2d38a1a04aae1b7f2d5300",
+        "previous_attempts": 0,
+        "idle_pause_seconds": 5.0,
+        "unload_interval": 5,
+        "raw_date_reading": "15/08/2023",
+        "label_score": {
+          "correct": 34,
+          "checked": 36,
+          "exact": false,
+          "mismatches": [
+            {
+              "field": "tax_total",
+              "actual": "292.42",
+              "raw_actual": "292.42",
+              "expected": 54.67,
+              "kind": "wrong"
+            },
+            {
+              "field": "items.6.unit_price",
+              "actual": null,
+              "raw_actual": null,
+              "expected": 45.25,
+              "kind": "missing"
+            }
+          ],
+          "visible_correct": 34,
+          "visible_checked": 36,
+          "abstention_correct": 0,
+          "abstention_checked": 0
+        },
+        "printed_score": {
+          "correct": 35,
+          "checked": 36,
+          "exact": false,
+          "mismatches": [
+            {
+              "field": "tax_total",
+              "actual": "292.42",
+              "raw_actual": "292.42",
+              "expected": 54.67,
+              "kind": "wrong"
+            }
+          ],
+          "visible_correct": 34,
+          "visible_checked": 35,
+          "abstention_correct": 1,
+          "abstention_checked": 1
+        }
+      },
+      {
+        "id": "synth_0009_8f6b430f.png",
+        "sha256": "7897dd9a466302bf0c04ab432a81e72a0c316d93c428790d873bf6f25c217cc5",
+        "template": "freelancer_invoice",
+        "seconds": 6.812,
+        "error": null,
+        "model_digest": "ea422f1e73652a95479954d8572d3c8c6022f628ce2d38a1a04aae1b7f2d5300",
+        "previous_attempts": 0,
+        "idle_pause_seconds": 5.0,
+        "unload_interval": 5,
+        "raw_date_reading": "15/07/2023",
+        "label_score": {
+          "correct": 24,
+          "checked": 24,
+          "exact": true,
+          "mismatches": [],
+          "visible_correct": 24,
+          "visible_checked": 24,
+          "abstention_correct": 0,
+          "abstention_checked": 0
+        },
+        "printed_score": {
+          "correct": 24,
+          "checked": 24,
+          "exact": true,
+          "mismatches": [],
+          "visible_correct": 24,
+          "visible_checked": 24,
+          "abstention_correct": 0,
+          "abstention_checked": 0
+        }
+      }
+    ]
+  },
+  "v6": {
+    "protocol": {
+      "normalization_version": "source-evidence-v2",
+      "prompt_version": "vision-read-v6",
+      "prompt_sha256": "3effa23b59594693e463cd74570bd5661db33aa8370c54cf8c2a71445cee2b85",
+      "image_edge": 1280,
+      "preprocessing_version": "white-margin-tall-strips-v1",
+      "model_options": {
+        "temperature": 0,
+        "seed": 0,
+        "num_ctx": 4096,
+        "num_predict": 2048,
+        "num_batch": 128
+      },
+      "description": "Strict row order, exact decimal values and normalized whitespace/case; no balancing or reference-fed inference."
+    },
+    "source": "https://huggingface.co/datasets/alamgirqazi/invoice-ocr-synthetic",
+    "revision": "673ff85be462eb7f3715ec188a295dd17ca11115",
+    "license": "CC-BY-4.0",
+    "model": "qwen3-vl:2b-instruct-q4_K_M",
+    "documents": 10,
+    "requested_documents": 10,
+    "completed_100": false,
+    "errors": 0,
+    "printed_exact_bills": 2,
+    "label_exact_bills": 2,
+    "printed_correct_fields": 238,
+    "printed_checked_fields": 252,
+    "visible_correct_fields": 214,
+    "visible_checked_fields": 224,
+    "abstention_correct_fields": 24,
+    "abstention_checked_fields": 28,
+    "median_seconds": 6.531499999999999,
+    "total_seconds": 70.626,
+    "mismatches_by_field": {
+      "currency": 5,
+      "description": 3,
+      "quantity": 3,
+      "tax_total": 2,
+      "supplier_name": 1
+    },
+    "results": [
+      {
+        "id": "synth_0000_8a064d3a.png",
+        "sha256": "f5a0551f11cea6f2edfc20dedbc3a876c2e27d3d6dc9b70cd90ebebfcbb4bf31",
+        "template": "event_ticket",
+        "seconds": 8.782,
+        "error": null,
+        "model_digest": "ea422f1e73652a95479954d8572d3c8c6022f628ce2d38a1a04aae1b7f2d5300",
+        "previous_attempts": 0,
+        "idle_pause_seconds": 5.0,
+        "unload_interval": 5,
+        "raw_date_reading": "15 July 2023",
+        "label_score": {
+          "correct": 35,
+          "checked": 48,
+          "exact": false,
+          "mismatches": [
+            {
+              "field": "currency",
+              "actual": null,
+              "raw_actual": "USD",
+              "expected": "USD",
+              "kind": "unsupported_format"
+            },
+            {
+              "field": "taxable_total",
+              "actual": null,
+              "raw_actual": null,
+              "expected": 675.0,
+              "kind": "missing"
+            },
+            {
+              "field": "tax_total",
+              "actual": null,
+              "raw_actual": null,
+              "expected": 47.25,
+              "kind": "missing"
+            },
+            {
+              "field": "items.0.unit_price",
+              "actual": null,
+              "raw_actual": null,
+              "expected": 60.0,
+              "kind": "missing"
+            },
+            {
+              "field": "items.1.unit_price",
+              "actual": null,
+              "raw_actual": null,
+              "expected": 40.0,
+              "kind": "missing"
+            },
+            {
+              "field": "items.2.unit_price",
+              "actual": null,
+              "raw_actual": null,
+              "expected": 120.0,
+              "kind": "missing"
+            },
+            {
+              "field": "items.3.unit_price",
+              "actual": null,
+              "raw_actual": null,
+              "expected": 80.0,
+              "kind": "missing"
+            },
+            {
+              "field": "items.4.unit_price",
+              "actual": null,
+              "raw_actual": null,
+              "expected": 200.0,
+              "kind": "missing"
+            },
+            {
+              "field": "items.5.unit_price",
+              "actual": null,
+              "raw_actual": null,
+              "expected": 35.0,
+              "kind": "missing"
+            },
+            {
+              "field": "items.6.unit_price",
+              "actual": null,
+              "raw_actual": null,
+              "expected": 20.0,
+              "kind": "missing"
+            },
+            {
+              "field": "items.7.unit_price",
+              "actual": null,
+              "raw_actual": null,
+              "expected": 15.0,
+              "kind": "missing"
+            },
+            {
+              "field": "items.8.unit_price",
+              "actual": null,
+              "raw_actual": null,
+              "expected": 50.0,
+              "kind": "missing"
+            },
+            {
+              "field": "items.9.unit_price",
+              "actual": null,
+              "raw_actual": null,
+              "expected": 55.0,
+              "kind": "missing"
+            }
+          ],
+          "visible_correct": 35,
+          "visible_checked": 48,
+          "abstention_correct": 0,
+          "abstention_checked": 0
+        },
+        "printed_score": {
+          "correct": 47,
+          "checked": 48,
+          "exact": false,
+          "mismatches": [
+            {
+              "field": "currency",
+              "actual": null,
+              "raw_actual": "USD",
+              "expected": null,
+              "kind": "unsupported_format"
+            }
+          ],
+          "visible_correct": 35,
+          "visible_checked": 35,
+          "abstention_correct": 12,
+          "abstention_checked": 13
+        }
+      },
+      {
+        "id": "synth_0001_188ad2b2.png",
+        "sha256": "048dfde0b74c9601a4df8d2777f11c0a6818e0ce57f495baf350ec8e1c3937dc",
+        "template": "event_ticket",
+        "seconds": 5.312,
+        "error": null,
+        "model_digest": "ea422f1e73652a95479954d8572d3c8c6022f628ce2d38a1a04aae1b7f2d5300",
+        "previous_attempts": 0,
+        "idle_pause_seconds": 5.0,
+        "unload_interval": 5,
+        "raw_date_reading": "15 July 2023",
+        "label_score": {
+          "correct": 9,
+          "checked": 20,
+          "exact": false,
+          "mismatches": [
+            {
+              "field": "taxable_total",
+              "actual": null,
+              "raw_actual": null,
+              "expected": 185.0,
+              "kind": "missing"
+            },
+            {
+              "field": "tax_total",
+              "actual": null,
+              "raw_actual": null,
+              "expected": 10.0,
+              "kind": "missing"
+            },
+            {
+              "field": "items.0.description",
+              "actual": "2.0 x STANDARD ADMISSION",
+              "raw_actual": "2.0 x STANDARD ADMISSION",
+              "expected": "Standard Admission",
+              "kind": "wrong"
+            },
+            {
+              "field": "items.0.quantity",
+              "actual": null,
+              "raw_actual": null,
+              "expected": 2.0,
+              "kind": "missing"
+            },
+            {
+              "field": "items.0.unit_price",
+              "actual": null,
+              "raw_actual": null,
+              "expected": 30.0,
+              "kind": "missing"
+            },
+            {
+              "field": "items.1.description",
+              "actual": "1.0 x VIP ADMISSION",
+              "raw_actual": "1.0 x VIP ADMISSION",
+              "expected": "VIP Admission",
+              "kind": "wrong"
+            },
+            {
+              "field": "items.1.quantity",
+              "actual": null,
+              "raw_actual": null,
+              "expected": 1.0,
+              "kind": "missing"
+            },
+            {
+              "field": "items.1.unit_price",
+              "actual": null,
+              "raw_actual": null,
+              "expected": 75.0,
+              "kind": "missing"
+            },
+            {
+              "field": "items.2.description",
+              "actual": "2.0 x EVENT T-SHIRT",
+              "raw_actual": "2.0 x EVENT T-SHIRT",
+              "expected": "Event T-shirt",
+              "kind": "wrong"
+            },
+            {
+              "field": "items.2.quantity",
+              "actual": null,
+              "raw_actual": null,
+              "expected": 2.0,
+              "kind": "missing"
+            },
+            {
+              "field": "items.2.unit_price",
+              "actual": null,
+              "raw_actual": null,
+              "expected": 25.0,
+              "kind": "missing"
+            }
+          ],
+          "visible_correct": 9,
+          "visible_checked": 20,
+          "abstention_correct": 0,
+          "abstention_checked": 0
+        },
+        "printed_score": {
+          "correct": 14,
+          "checked": 20,
+          "exact": false,
+          "mismatches": [
+            {
+              "field": "items.0.description",
+              "actual": "2.0 x STANDARD ADMISSION",
+              "raw_actual": "2.0 x STANDARD ADMISSION",
+              "expected": "Standard Admission",
+              "kind": "wrong"
+            },
+            {
+              "field": "items.0.quantity",
+              "actual": null,
+              "raw_actual": null,
+              "expected": 2.0,
+              "kind": "missing"
+            },
+            {
+              "field": "items.1.description",
+              "actual": "1.0 x VIP ADMISSION",
+              "raw_actual": "1.0 x VIP ADMISSION",
+              "expected": "VIP Admission",
+              "kind": "wrong"
+            },
+            {
+              "field": "items.1.quantity",
+              "actual": null,
+              "raw_actual": null,
+              "expected": 1.0,
+              "kind": "missing"
+            },
+            {
+              "field": "items.2.description",
+              "actual": "2.0 x EVENT T-SHIRT",
+              "raw_actual": "2.0 x EVENT T-SHIRT",
+              "expected": "Event T-shirt",
+              "kind": "wrong"
+            },
+            {
+              "field": "items.2.quantity",
+              "actual": null,
+              "raw_actual": null,
+              "expected": 2.0,
+              "kind": "missing"
+            }
+          ],
+          "visible_correct": 9,
+          "visible_checked": 15,
+          "abstention_correct": 5,
+          "abstention_checked": 5
+        }
+      },
+      {
+        "id": "synth_0002_8f01361b.png",
+        "sha256": "31b538c6fd7c1b3af5ffde784fedc8d2148e09856297120f3a725554a075fa08",
+        "template": "freelancer_invoice",
+        "seconds": 6.547,
+        "error": null,
+        "model_digest": "ea422f1e73652a95479954d8572d3c8c6022f628ce2d38a1a04aae1b7f2d5300",
+        "previous_attempts": 0,
+        "idle_pause_seconds": 5.0,
+        "unload_interval": 5,
+        "raw_date_reading": "15/07/2023",
+        "label_score": {
+          "correct": 23,
+          "checked": 24,
+          "exact": false,
+          "mismatches": [
+            {
+              "field": "currency",
+              "actual": null,
+              "raw_actual": "CNY",
+              "expected": "CAD",
+              "kind": "unsupported_format"
+            }
+          ],
+          "visible_correct": 23,
+          "visible_checked": 24,
+          "abstention_correct": 0,
+          "abstention_checked": 0
+        },
+        "printed_score": {
+          "correct": 23,
+          "checked": 24,
+          "exact": false,
+          "mismatches": [
+            {
+              "field": "currency",
+              "actual": null,
+              "raw_actual": "CNY",
+              "expected": null,
+              "kind": "unsupported_format"
+            }
+          ],
+          "visible_correct": 23,
+          "visible_checked": 23,
+          "abstention_correct": 0,
+          "abstention_checked": 1
+        }
+      },
+      {
+        "id": "synth_0003_d1afe8fa.png",
+        "sha256": "e9d154c6a06ee7e93107a4e6a73d59eabc41ae033dc3db5f7cc3242a8c754f47",
+        "template": "freelancer_invoice",
+        "seconds": 6.125,
+        "error": null,
+        "model_digest": "ea422f1e73652a95479954d8572d3c8c6022f628ce2d38a1a04aae1b7f2d5300",
+        "previous_attempts": 0,
+        "idle_pause_seconds": 5.0,
+        "unload_interval": 5,
+        "raw_date_reading": "15/08/2023",
+        "label_score": {
+          "correct": 22,
+          "checked": 24,
+          "exact": false,
+          "mismatches": [
+            {
+              "field": "currency",
+              "actual": null,
+              "raw_actual": null,
+              "expected": "GBP",
+              "kind": "missing"
+            },
+            {
+              "field": "tax_total",
+              "actual": "240.00",
+              "raw_actual": "240.00",
+              "expected": 246.0,
+              "kind": "wrong"
+            }
+          ],
+          "visible_correct": 22,
+          "visible_checked": 24,
+          "abstention_correct": 0,
+          "abstention_checked": 0
+        },
+        "printed_score": {
+          "correct": 22,
+          "checked": 24,
+          "exact": false,
+          "mismatches": [
+            {
+              "field": "currency",
+              "actual": null,
+              "raw_actual": null,
+              "expected": "GBP",
+              "kind": "missing"
+            },
+            {
+              "field": "tax_total",
+              "actual": "240.00",
+              "raw_actual": "240.00",
+              "expected": null,
+              "kind": "wrong"
+            }
+          ],
+          "visible_correct": 22,
+          "visible_checked": 23,
+          "abstention_correct": 0,
+          "abstention_checked": 1
+        }
+      },
+      {
+        "id": "synth_0004_6eb68b29.png",
+        "sha256": "0c5237d5140408c8f46825bf883bbc7239807359089c4c5388c91a3f668738d8",
+        "template": "event_ticket",
+        "seconds": 6.516,
+        "error": null,
+        "model_digest": "ea422f1e73652a95479954d8572d3c8c6022f628ce2d38a1a04aae1b7f2d5300",
+        "previous_attempts": 0,
+        "idle_pause_seconds": 5.0,
+        "unload_interval": 5,
+        "raw_date_reading": "15 July 2023",
+        "label_score": {
+          "correct": 17,
+          "checked": 24,
+          "exact": false,
+          "mismatches": [
+            {
+              "field": "supplier_name",
+              "actual": "Riverbank Enterprises Ltd",
+              "raw_actual": "Riverbank Enterprises Ltd",
+              "expected": "TartanTech Solutions Ltd",
+              "kind": "wrong"
+            },
+            {
+              "field": "taxable_total",
+              "actual": null,
+              "raw_actual": null,
+              "expected": 2650.0,
+              "kind": "missing"
+            },
+            {
+              "field": "tax_total",
+              "actual": null,
+              "raw_actual": null,
+              "expected": 435.0,
+              "kind": "missing"
+            },
+            {
+              "field": "items.0.unit_price",
+              "actual": null,
+              "raw_actual": null,
+              "expected": 1200.0,
+              "kind": "missing"
+            },
+            {
+              "field": "items.1.unit_price",
+              "actual": null,
+              "raw_actual": null,
+              "expected": 300.0,
+              "kind": "missing"
+            },
+            {
+              "field": "items.2.unit_price",
+              "actual": null,
+              "raw_actual": null,
+              "expected": 450.0,
+              "kind": "missing"
+            },
+            {
+              "field": "items.3.unit_price",
+              "actual": null,
+              "raw_actual": null,
+              "expected": 50.0,
+              "kind": "missing"
+            }
+          ],
+          "visible_correct": 17,
+          "visible_checked": 24,
+          "abstention_correct": 0,
+          "abstention_checked": 0
+        },
+        "printed_score": {
+          "correct": 23,
+          "checked": 24,
+          "exact": false,
+          "mismatches": [
+            {
+              "field": "supplier_name",
+              "actual": "Riverbank Enterprises Ltd",
+              "raw_actual": "Riverbank Enterprises Ltd",
+              "expected": "TartanTech Solutions Ltd",
+              "kind": "wrong"
+            }
+          ],
+          "visible_correct": 17,
+          "visible_checked": 18,
+          "abstention_correct": 6,
+          "abstention_checked": 6
+        }
+      },
+      {
+        "id": "synth_0005_553deef3.png",
+        "sha256": "050ba365a7603b8eaf78ce196982c33a0242193ed0e15f9305d7be99b2b9ef1a",
+        "template": "formal_corporate",
+        "seconds": 10.86,
+        "error": null,
+        "model_digest": "ea422f1e73652a95479954d8572d3c8c6022f628ce2d38a1a04aae1b7f2d5300",
+        "previous_attempts": 0,
+        "idle_pause_seconds": 5.0,
+        "unload_interval": 5,
+        "raw_date_reading": "15/03/2024",
+        "label_score": {
+          "correct": 20,
+          "checked": 20,
+          "exact": true,
+          "mismatches": [],
+          "visible_correct": 20,
+          "visible_checked": 20,
+          "abstention_correct": 0,
+          "abstention_checked": 0
+        },
+        "printed_score": {
+          "correct": 20,
+          "checked": 20,
+          "exact": true,
+          "mismatches": [],
+          "visible_correct": 20,
+          "visible_checked": 20,
+          "abstention_correct": 0,
+          "abstention_checked": 0
+        }
+      },
+      {
+        "id": "synth_0006_474081ca.png",
+        "sha256": "7d9492d0fb691aa6ae0bd004bfb1e4843051542a87b5c3febd1cd1e3edc97605",
+        "template": "modern_minimal",
+        "seconds": 5.531,
+        "error": null,
+        "model_digest": "ea422f1e73652a95479954d8572d3c8c6022f628ce2d38a1a04aae1b7f2d5300",
+        "previous_attempts": 0,
+        "idle_pause_seconds": 5.0,
+        "unload_interval": 5,
+        "raw_date_reading": "08/15/2023",
+        "label_score": {
+          "correct": 15,
+          "checked": 16,
+          "exact": false,
+          "mismatches": [
+            {
+              "field": "currency",
+              "actual": null,
+              "raw_actual": "USD",
+              "expected": "USD",
+              "kind": "unsupported_format"
+            }
+          ],
+          "visible_correct": 15,
+          "visible_checked": 16,
+          "abstention_correct": 0,
+          "abstention_checked": 0
+        },
+        "printed_score": {
+          "correct": 15,
+          "checked": 16,
+          "exact": false,
+          "mismatches": [
+            {
+              "field": "currency",
+              "actual": null,
+              "raw_actual": "USD",
+              "expected": null,
+              "kind": "unsupported_format"
+            }
+          ],
+          "visible_correct": 15,
+          "visible_checked": 15,
+          "abstention_correct": 0,
+          "abstention_checked": 1
+        }
+      },
+      {
+        "id": "synth_0007_7292e354.png",
+        "sha256": "d4b3f8ca279561cb3de4a54fccba7e1fe93a700015edaa0a9c696e62ccb1214d",
+        "template": "utility_bill",
+        "seconds": 5.563,
+        "error": null,
+        "model_digest": "ea422f1e73652a95479954d8572d3c8c6022f628ce2d38a1a04aae1b7f2d5300",
+        "previous_attempts": 0,
+        "idle_pause_seconds": 5.0,
+        "unload_interval": 5,
+        "raw_date_reading": "15/08/2023",
+        "label_score": {
+          "correct": 16,
+          "checked": 16,
+          "exact": true,
+          "mismatches": [],
+          "visible_correct": 16,
+          "visible_checked": 16,
+          "abstention_correct": 0,
+          "abstention_checked": 0
+        },
+        "printed_score": {
+          "correct": 16,
+          "checked": 16,
+          "exact": true,
+          "mismatches": [],
+          "visible_correct": 16,
+          "visible_checked": 16,
+          "abstention_correct": 0,
+          "abstention_checked": 0
+        }
+      },
+      {
+        "id": "synth_0008_10e4136c.png",
+        "sha256": "52b081a16c6faa55c91d28356732f1ed5d711e62ce3c791de74041cfbde1b940",
+        "template": "pos_thermal",
+        "seconds": 8.593,
+        "error": null,
+        "model_digest": "ea422f1e73652a95479954d8572d3c8c6022f628ce2d38a1a04aae1b7f2d5300",
+        "previous_attempts": 0,
+        "idle_pause_seconds": 5.0,
+        "unload_interval": 5,
+        "raw_date_reading": "15/08/2023",
+        "label_score": {
+          "correct": 34,
+          "checked": 36,
+          "exact": false,
+          "mismatches": [
+            {
+              "field": "tax_total",
+              "actual": "292.42",
+              "raw_actual": "292.42",
+              "expected": 54.67,
+              "kind": "wrong"
+            },
+            {
+              "field": "items.6.unit_price",
+              "actual": null,
+              "raw_actual": null,
+              "expected": 45.25,
+              "kind": "missing"
+            }
+          ],
+          "visible_correct": 34,
+          "visible_checked": 36,
+          "abstention_correct": 0,
+          "abstention_checked": 0
+        },
+        "printed_score": {
+          "correct": 35,
+          "checked": 36,
+          "exact": false,
+          "mismatches": [
+            {
+              "field": "tax_total",
+              "actual": "292.42",
+              "raw_actual": "292.42",
+              "expected": 54.67,
+              "kind": "wrong"
+            }
+          ],
+          "visible_correct": 34,
+          "visible_checked": 35,
+          "abstention_correct": 1,
+          "abstention_checked": 1
+        }
+      },
+      {
+        "id": "synth_0009_8f6b430f.png",
+        "sha256": "7897dd9a466302bf0c04ab432a81e72a0c316d93c428790d873bf6f25c217cc5",
+        "template": "freelancer_invoice",
+        "seconds": 6.797,
+        "error": null,
+        "model_digest": "ea422f1e73652a95479954d8572d3c8c6022f628ce2d38a1a04aae1b7f2d5300",
+        "previous_attempts": 0,
+        "idle_pause_seconds": 5.0,
+        "unload_interval": 5,
+        "raw_date_reading": "15/07/2023",
+        "label_score": {
+          "correct": 23,
+          "checked": 24,
+          "exact": false,
+          "mismatches": [
+            {
+              "field": "currency",
+              "actual": null,
+              "raw_actual": null,
+              "expected": "EUR",
+              "kind": "missing"
+            }
+          ],
+          "visible_correct": 23,
+          "visible_checked": 24,
+          "abstention_correct": 0,
+          "abstention_checked": 0
+        },
+        "printed_score": {
+          "correct": 23,
+          "checked": 24,
+          "exact": false,
+          "mismatches": [
+            {
+              "field": "currency",
+              "actual": null,
+              "raw_actual": null,
+              "expected": "EUR",
+              "kind": "missing"
+            }
+          ],
+          "visible_correct": 23,
+          "visible_checked": 24,
+          "abstention_correct": 0,
+          "abstention_checked": 0
+        }
+      }
+    ]
+  },
+  "diagnostic_probes": {
+    "currency-schema-probe.json": [
+      {
+        "case": "pattern_nullable",
+        "raw_response": "{\"currency\":null}",
+        "done_reason": "stop"
+      },
+      {
+        "case": "plain_nullable",
+        "raw_response": "{\"currency\":null}",
+        "done_reason": "stop"
+      },
+      {
+        "case": "null_first",
+        "raw_response": "{\"currency\":null}",
+        "done_reason": "stop"
+      }
+    ],
+    "currency-image-probe.json": [
+      {
+        "id": "synth_0000_8a064d3a.jpg",
+        "raw": "{\"tokens\":[\"$\",\"$\",\"$\",\"$\",\"$\",\"$\",\"$\",\"$\"]}"
+      },
+      {
+        "id": "synth_0001_188ad2b2.jpg",
+        "raw": "{\"tokens\":[\"\u00a3\",\"\u00a3\",\"\u00a3\",\"\u00a3\",\"\u00a3\",\"\u00a3\",\"\u00a3\",\"\u00a3\"]}"
+      },
+      {
+        "id": "synth_0002_8f01361b.jpg",
+        "raw": "{\"tokens\":[\"C$\",\"C$\",\"C$\",\"C$\",\"C$\",\"C$\",\"C$\",\"C$\"]}"
+      },
+      {
+        "id": "synth_0003_d1afe8fa.jpg",
+        "raw": "{\"tokens\": [\"\u00a3\", \"\u20ac\", \"\u00a5\", \"\u00a3\", \"\u00a3\", \"\u00a3\", \"\u00a3\", \"\u00a3\"]}"
+      },
+      {
+        "id": "synth_0004_6eb68b29.jpg",
+        "raw": "{\"tokens\":[\"\u00a3\",\"\u00a3\",\"\u00a3\",\"\u00a3\",\"\u00a3\",\"\u00a3\",\"\u00a3\",\"\u00a3\"]}"
+      }
+    ],
+    "currency-total-probe.json": [
+      {
+        "id": "synth_0000_8a064d3a.jpg",
+        "raw": "{\"token\": \"$722.25\"}"
+      },
+      {
+        "id": "synth_0001_188ad2b2.jpg",
+        "raw": "{\"token\": \"\u00a3195.00\"}"
+      },
+      {
+        "id": "synth_0002_8f01361b.jpg",
+        "raw": "{\"token\": \"C$2331.0\"}"
+      },
+      {
+        "id": "synth_0003_d1afe8fa.jpg",
+        "raw": "{\"token\": \"\u00a3\"}"
+      },
+      {
+        "id": "synth_0004_6eb68b29.jpg",
+        "raw": "{\"token\": \"\u00a33085.00\"}"
+      }
+    ]
+  },
+  "probe_conclusion": "Null is supported by the schema; focused token reads still hallucinated some symbols. These diagnostic variants were not selected.",
+  "pilot_preferred_candidate": "vision-read-v5",
+  "final_selected_reader": "vision-read-v4",
+  "scoring_note": "Original pilot scores are archived under the old currency mask. Final complete comparisons use the audited C$/A$ visibility rules."
+}
