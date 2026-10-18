@@ -1,7 +1,8 @@
 # Local Qwen verification
 
-The current prompt changes have a [19-bill partial trial](testing/qwen-v4-partial.md).
-The full 100-bill rerun remains incomplete because of memory pressure.
+The [completed evaluation](testing/qwen-two-set-evaluation.md) covers the development
+100 and a separate frozen 100-image validation set. Qwen v4 remains selected after
+the readability candidate regressed. Human review is required; 100% was not reached.
 
 The selected model is `qwen3-vl:2b-instruct-q4_K_M`. It reads the source image
 independently, then the application compares that reading with the draft.

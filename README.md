@@ -189,13 +189,17 @@ The public evaluation downloads 100 distinct synthetic invoices from a pinned re
 
 See [the evaluation report](docs/testing/100-bill-evaluation.md) for scope and results. `--strict` allows one documented source exchange-rate rounding discrepancy only when flagged for review; it does not count that case as an exact extraction. Any other mismatch fails the command.
 
-The [200-bill regression and vision comparison](docs/testing/200-bill-vision-comparison.md)
-adds 100 distinct source images, tested with the same OCR path and two local models.
-Qwen read 97.1% of visible values correctly, with 38/100 complete printed-field
-contracts exact; Granite read 40.8%, including 16 timed-out responses as failures.
-These are debugging-set results, not production guarantees. Qwen remains the default;
-every bill still needs human review. Per-bill mismatches, source checksums, model
-digests and reproduction commands are included in the report.
+The [historical comparison](docs/testing/200-bill-vision-comparison.md) retains the
+original runs. A [scoring audit](docs/testing/currency-scoring-audit.json) corrects
+qualified C$/A$ visibility and regrades cached responses uniformly. The selected
+Qwen v4 reader agrees with 2207/2271 expected printed fields (97.18%) on the
+100-image development set; 52/100 entire printed-field contracts are exact.
+On a separate frozen 100-image validation set, it agrees with 2104/2157 expected
+printed fields (97.54%); 53/100 checked records are exact. The attempted readability
+changes were rejected after introducing numeric regressions. See the
+[completed two-set evaluation](docs/testing/qwen-two-set-evaluation.md).
+These are synthetic debugging results, not production guarantees. Every bill
+still needs human review. Source hashes, model digests and mismatches are retained.
 
 Foreign-currency documents can be reviewed but cannot be approved or exported as INR. Their source currency is stored separately and cannot be relabelled through a save request. Printed item amounts and totals are retained; VAT-inclusive normalization and dual-currency calculations are disclosed in extraction notes. New layouts, languages and unclear photos still require human review.
 

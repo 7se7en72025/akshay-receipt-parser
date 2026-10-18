@@ -1,5 +1,9 @@
 # Qwen v4 trial: incomplete
 
+This is an archived partial snapshot, superseded by the
+[completed two-set evaluation](qwen-two-set-evaluation.md). Its original scores
+predate the qualified-dollar visibility correction.
+
 19 of the requested 100 bills were read before the run stopped for low available
 system RAM. The Android emulator remains open at the user's request. Qwen was
 unloaded to release memory. The benchmark now checks memory before each new
