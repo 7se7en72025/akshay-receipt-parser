@@ -41618,5 +41618,6 @@
     "Each failed response counts as zero correct fields, not a skipped document.",
     "Ambiguous numerical dates are deliberately left unnormalized for manual review; their raw model readings are retained.",
     "AI suggestions never automatically alter, approve or export a bill."
-  ]
+  ],
+  "scoring_status": "Historical scoring snapshot; currency visibility superseded by currency-scoring-audit.json. Original readings and metrics retained."
 }

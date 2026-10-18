@@ -88,7 +88,7 @@ def main():
     target = ROOT / "docs/testing"
     (target / "qwen-improvement-results.json").write_text(json.dumps(report, indent=2), encoding="utf-8")
     rows = []
-    for label, value in (("Before (v3)", before), ("After (v4)", current)):
+    for label, value in (("Before (v3)", before), (f"After ({vision.PROMPT_VERSION})", current)):
         c, n = value["visible_correct_fields"], value["visible_checked_fields"]
         rows.append(f"| {label} | {c}/{n} ({c/n:.2%}) | {value['printed_exact_bills']}/100 | "
                     f"{value['abstention_correct_fields']}/{value['abstention_checked_fields']} | {value['errors']} |")

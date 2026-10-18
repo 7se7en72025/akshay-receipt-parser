@@ -1,5 +1,7 @@
 # 200-bill regression and local vision comparison
 
+> Historical scoring snapshot: the old C$/A$ visibility mask was incorrect. See [the scoring audit](currency-scoring-audit.json) for uniformly regraded results; original scores below are retained for traceability.
+
 Generated: 2026-10-17T19:25:40.038535+00:00
 
 ## What was evaluated
